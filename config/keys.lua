@@ -124,6 +124,42 @@ local function resize_pane_by_percent(window, pane, dir)
   window:perform_action(act.AdjustPaneSize({ dir, step }), pane)
 end
 
+local function prefer_one_third_for_traecli(window, pane)
+  -- 需求：仅当当前窗口“足够大”（如全屏）时才用 1/3；否则保持 1/2。
+  -- 这里严格以全屏标志判断，避免非全屏但窗口较大时也变成 1/3。
+  local ok, wdim = pcall(function()
+    return window and window.get_dimensions and window:get_dimensions() or nil
+  end)
+  if ok and type(wdim) == 'table' then
+    return (wdim.is_full_screen == true) or (wdim.full_screen == true)
+  end
+  return false
+end
+
+local function split_traecli(window, pane)
+  local percent = prefer_one_third_for_traecli(window, pane) and 33 or 50
+
+  if window then
+    window:toast_notification('WezTerm', '正在打开 traecli…', nil, 1200)
+  end
+
+  -- 用 SplitPane 明确指定 size 与 command；不同 WezTerm 版本更稳定。
+  local ok, err = pcall(function()
+    window:perform_action(
+      act.SplitPane({
+        -- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
+        direction = 'Right',
+        size = { Percent = percent },
+        command = { args = { '/Users/bytedance/.local/bin/traecli' } },
+      }),
+      pane
+    )
+  end)
+  if not ok and window then
+    window:toast_notification('WezTerm', '打开 traecli 分屏失败：' .. tostring(err), nil, 8000)
+  end
+end
+
 -- 鼠标
 keys_config.mouse_bindings = {
   -- 选中后复制到 clipboard
@@ -206,9 +242,19 @@ keys_config.keys = {
         end),
     },
     {
+        key = "T",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(function(window, pane)
+          split_traecli(window, pane)
+        end),
+    },
+    -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
+    {
         key = "t",
         mods = "CMD|SHIFT",
-        action = wezterm.action.SplitHorizontal { args = { "/Users/bytedance/.local/bin/traecli" }},
+        action = wezterm.action_callback(function(window, pane)
+          split_traecli(window, pane)
+        end),
     },
     {
         key = "h",
