@@ -25,8 +25,9 @@ window_config.window_frame = {
   -- tab/titlebar 使用 window_frame.font；这里直接指定 Bold 让所有 tab 标签更“粗”
   font = wezterm.font({ family = 'JetBrainsMono Nerd Font', weight = 'Bold' }),
   font_size = 15.0,
-  active_titlebar_bg = '#15141b',
-  inactive_titlebar_bg = '#15141b',
+  -- 中性灰黑：保留层次但减少紫/蓝倾向
+  active_titlebar_bg = '#1b1b1f',
+  inactive_titlebar_bg = '#141418',
 }
 
 local init = require 'config/init'
