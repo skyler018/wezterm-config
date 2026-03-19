@@ -46,12 +46,14 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_wid
   -- ========= 优先使用 shell 注入 =========
   if title ~= "" then
     return {
+      { Attribute = { Intensity = 'Bold' } },
       { Text = " " .. idx .. " " .. icon .. title .. " " },
     }
   end
 
   -- ========= fallback =========
   return {
+    { Attribute = { Intensity = 'Bold' } },
     { Text = " " .. idx .. " " .. icon .. proc .. " " },
   }
 end)

@@ -22,7 +22,8 @@ window_config.window_decorations = "INTEGRATED_BUTTONS|RESIZE"
 window_config.macos_window_background_blur = 20     -- 背景模糊，阴影效果会自然呈现
 window_config.window_background_opacity = 0.92      -- 半透明
 window_config.window_frame = {
-  font = wezterm.font({ family = 'JetBrainsMono Nerd Font', weight = 'Regular' }),
+  -- tab/titlebar 使用 window_frame.font；这里直接指定 Bold 让所有 tab 标签更“粗”
+  font = wezterm.font({ family = 'JetBrainsMono Nerd Font', weight = 'Bold' }),
   font_size = 15.0,
   active_titlebar_bg = '#15141b',
   inactive_titlebar_bg = '#15141b',
