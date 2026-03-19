@@ -86,7 +86,7 @@
 - `CMD+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录（见 `config/keys.lua:146`）
 - `CMD+SHIFT+g`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录（见 `config/keys.lua:177`）
 - `CMD+SHIFT+i`：手动弹出依赖安装提示（见 `config/keys.lua:201`）
-- `CMD+SHIFT+t`：水平分屏并启动 `traecli`（固定路径 `/Users/bytedance/.local/bin/traecli`，见 `config/keys.lua:208`）
+- `CMD+SHIFT+t`：右侧分屏启动 `traecli`（按 `PATH` 查找）；若未检测到则 fallback 启动 `claude`；二者都不存在会引导安装 `claude`（见 `config/keys.lua:139`）
 
 - Pane 焦点移动：`CMD+h/j/k/l`（见 `config/keys.lua:213`）
 - 进入复制模式：`CMD+SHIFT+c`（见 `config/keys.lua:229`）
@@ -106,7 +106,7 @@
 ## 依赖与建议
 
 - 建议安装字体：`JetBrainsMono Nerd Font`（Tab 标题的 icon 依赖 Nerd Font 字形，见 `config/tabs.lua:28`）
-- 可选依赖：`yazi`、`lazygit`（会在启动或按快捷键时检测并提示安装，见 `config/deps.lua:132`）
+- 可选依赖：`yazi`、`lazygit`、`claude`（会在启动或按快捷键时检测并提示安装，见 `config/deps.lua:164`）
 
 ## 自定义入口
 

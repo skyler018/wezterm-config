@@ -12,8 +12,7 @@ font_config.font = wezterm.font_with_fallback({
 font_config.font_rules = {
   -- Prevent thin weight: use Regular instead of Light for Half intensity
   {
-    --intensity = 'Half',
-    intensity = 'Bold',
+    intensity = 'Half',
     font = wezterm.font_with_fallback({
       { family = 'JetBrainsMono Nerd Font', weight = 'Bold' },
     }),
@@ -26,11 +25,11 @@ font_config.font_rules = {
       { family = 'JetBrainsMono Nerd Font', weight = 'Bold', italic = false },
     }),
   },
-  -- Bold: use Medium weight instead of Heavy
+  -- Bold: keep consistent with base font weight
   {
     intensity = 'Bold',
     font = wezterm.font_with_fallback({
-      { family = 'JetBrainsMono Nerd Font', weight = 'Medium' },
+      { family = 'JetBrainsMono Nerd Font', weight = 'Bold' },
     }),
   },
 }
