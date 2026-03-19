@@ -7,6 +7,7 @@ local M = {}
 local MANAGED_BINS = {
   { bin = 'yazi', brew = 'yazi' },
   { bin = 'lazygit', brew = 'lazygit' },
+  { bin = 'claude', brew = 'claude' },
 }
 
 local function trim(s)
@@ -42,6 +43,30 @@ function M.get_missing_managed_deps()
     local exists = M.command_exists(item.bin)
     if not exists then
       table.insert(missing, item)
+    end
+  end
+  return missing
+end
+
+function M.get_missing_for_bins(bins)
+  if type(bins) ~= 'table' or #bins == 0 then
+    return {}
+  end
+
+  local wanted = {}
+  for _, bin in ipairs(bins) do
+    if type(bin) == 'string' and #bin > 0 then
+      wanted[bin] = true
+    end
+  end
+
+  local missing = {}
+  for _, item in ipairs(MANAGED_BINS) do
+    if wanted[item.bin] then
+      local exists = M.command_exists(item.bin)
+      if not exists then
+        table.insert(missing, item)
+      end
     end
   end
   return missing
@@ -143,4 +168,3 @@ wezterm.on('gui-startup', function(cmd)
 end)
 
 return M
-

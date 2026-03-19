@@ -139,25 +139,48 @@ end
 local function split_traecli(window, pane)
   local percent = prefer_one_third_for_traecli(window, pane) and 33 or 50
 
-  if window then
-    window:toast_notification('WezTerm', '正在打开 traecli…', nil, 1200)
+  if not window or not pane then
+    return
   end
 
-  -- 用 SplitPane 明确指定 size 与 command；不同 WezTerm 版本更稳定。
-  local ok, err = pcall(function()
-    window:perform_action(
-      act.SplitPane({
-        -- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
-        direction = 'Right',
-        size = { Percent = percent },
-        command = { args = { '/Users/bytedance/.local/bin/traecli' } },
-      }),
-      pane
-    )
-  end)
-  if not ok and window then
-    window:toast_notification('WezTerm', '打开 traecli 分屏失败：' .. tostring(err), nil, 8000)
+  local function split_right(args, toast_title)
+    if toast_title and #toast_title > 0 then
+      window:toast_notification('WezTerm', toast_title, nil, 1200)
+    end
+
+    -- 用 SplitPane 明确指定 size 与 command；不同 WezTerm 版本更稳定。
+    local ok, err = pcall(function()
+      window:perform_action(
+        act.SplitPane({
+          -- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
+          direction = 'Right',
+          size = { Percent = percent },
+          command = { args = args },
+        }),
+        pane
+      )
+    end)
+    if not ok then
+      window:toast_notification('WezTerm', '打开分屏失败：' .. tostring(err), nil, 8000)
+    end
   end
+
+  -- 像 yazi 一样先判断命令是否存在（按 PATH 查找）
+  local trae_ok, trae_path = deps.command_exists('traecli')
+  if trae_ok then
+    split_right({ trae_path or 'traecli' }, '正在打开 traecli…')
+    return
+  end
+
+  -- traecli 不存在时，尝试 fallback 到 claude（存在性判断与安装引导按 yazi 方式）
+  local claude_ok, claude_path = deps.command_exists('claude')
+  if claude_ok then
+    split_right({ claude_path or 'claude' }, '未检测到 traecli，正在打开 claude…')
+    return
+  end
+
+  window:toast_notification('WezTerm', '未检测到 traecli/claude，将引导安装 claude…', nil, 4000)
+  deps.prompt_install(window, pane, deps.get_missing_for_bins({ 'claude' }))
 end
 
 -- 鼠标
