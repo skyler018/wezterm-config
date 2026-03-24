@@ -379,4 +379,7 @@ keys_config.keys = {
 }
 
 local init = require 'config/init'
+local resurrect_config = require 'config/resurrect'
+resurrect_config.setup(keys_config)
+
 init.register('keys', keys_config)
