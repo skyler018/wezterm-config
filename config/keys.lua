@@ -155,7 +155,12 @@ local function split_traecli(window, pane)
           -- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
           direction = 'Right',
           size = { Percent = percent },
-          command = { args = args },
+          command = { 
+            args = args,
+            set_environment_variables = {
+              PATH = os.getenv('PATH'),
+            },
+          },
         }),
         pane
       )
@@ -168,14 +173,14 @@ local function split_traecli(window, pane)
   -- 像 yazi 一样先判断命令是否存在（按 PATH 查找）
   local trae_ok, trae_path = deps.command_exists('traecli')
   if trae_ok then
-    split_right({ trae_path or 'traecli' }, '正在打开 traecli…')
+    split_right({ 'zsh', '-ic', 'exec "$0" "$@"', trae_path or 'traecli' }, '正在打开 traecli…')
     return
   end
 
   -- traecli 不存在时，尝试 fallback 到 claude（存在性判断与安装引导按 yazi 方式）
   local claude_ok, claude_path = deps.command_exists('claude')
   if claude_ok then
-    split_right({ claude_path or 'claude' }, '未检测到 traecli，正在打开 claude…')
+    split_right({ 'zsh', '-ic', 'exec "$0" "$@"', claude_path or 'claude' }, '未检测到 traecli，正在打开 claude…')
     return
   end
 
@@ -217,7 +222,7 @@ keys_config.keys = {
             window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
           end
 
-          local args = { yazi_path or 'yazi' }
+          local args = { 'zsh', '-ic', 'exec "$0" "$@"', yazi_path or 'yazi' }
           -- yazi 支持传入初始目录：yazi <dir>
           if cwd and #cwd > 0 then
             table.insert(args, cwd)
@@ -226,8 +231,11 @@ keys_config.keys = {
             act.SpawnCommandInNewTab({
               domain = 'CurrentPaneDomain',
               cwd = cwd,
-              -- 直接执行二进制，避免 login shell（-l）把 cwd 重置到 $HOME
+              -- 通过 zsh 调用以加载环境变量，解决 yazi 插件找不到命令的问题
               args = args,
+              set_environment_variables = {
+                PATH = os.getenv('PATH'),
+              },
             }),
             pane
           )
@@ -251,7 +259,10 @@ keys_config.keys = {
             act.SpawnCommandInNewTab({
               domain = 'CurrentPaneDomain',
               cwd = cwd,
-              args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
+              args = { 'zsh', '-ic', 'exec "$0" "$@"', lazygit_path or 'lazygit', '-p', cwd or '.' },
+              set_environment_variables = {
+                PATH = os.getenv('PATH'),
+              },
             }),
             pane
           )
