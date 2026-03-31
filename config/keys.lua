@@ -46,6 +46,60 @@ local function get_pane_cwd(pane)
   return nil
 end
 
+local function get_selected_text(window, pane)
+  local ok, text = pcall(function()
+    if window and window.get_selection_text_for_pane then
+      return window:get_selection_text_for_pane(pane)
+    end
+    if pane and pane.get_selection_text then
+      return pane:get_selection_text()
+    end
+    return nil
+  end)
+  if not ok then
+    return nil
+  end
+  if type(text) ~= 'string' then
+    return nil
+  end
+
+  -- 选区可能包含换行/空白；提取第一段非空内容
+  text = text:gsub('^%s+', ''):gsub('%s+$', '')
+  if #text == 0 then
+    return nil
+  end
+  return text
+end
+
+local function extract_http_url(text)
+  if not text or #text == 0 then
+    return nil
+  end
+  -- 尽量贴近 RFC3986：允许常见 URL 字符，排除空白与引号等分隔符
+  return text:match("https?://[%w%-%._~:/%?#%[%]@!$&'%(%)*%+,;=]+")
+end
+
+local function open_selected_http_url(window, pane)
+  local selected = get_selected_text(window, pane)
+  local url = extract_http_url(selected)
+  if not url then
+    window:toast_notification('WezTerm', '未在选中文本中找到 http/https 链接', nil, 4000)
+    return
+  end
+
+  if type(wezterm.open_with) ~= 'function' then
+    window:toast_notification('WezTerm', '当前 WezTerm 版本不支持 wezterm.open_with()', nil, 6000)
+    return
+  end
+
+  local ok, err = pcall(function()
+    wezterm.open_with(url)
+  end)
+  if not ok then
+    window:toast_notification('WezTerm', '打开链接失败：' .. tostring(err), nil, 8000)
+  end
+end
+
 local RESIZE_PERCENT = 0.05
 local MAX_STEP_COLS = 30
 local MAX_STEP_ROWS = 15
@@ -190,14 +244,14 @@ end
 
 -- 鼠标
 keys_config.mouse_bindings = {
-  -- 选中后复制到 clipboard
+  -- 左键双击：选词并复制到剪贴板
   {
-    event = { Up = { streak = 1, button = 'Left' } },
+    event = { Up = { streak = 2, button = 'Left' } },
     mods = 'NONE',
     action = act.CompleteSelection('ClipboardAndPrimarySelection'),
   },
 
-  -- 右键粘贴
+  -- 右键单击：粘贴
   {
     event = { Down = { streak = 1, button = 'Right' } },
     mods = 'NONE',
@@ -273,6 +327,20 @@ keys_config.keys = {
         mods = "CMD|SHIFT",
         action = wezterm.action_callback(function(window, pane)
           deps.prompt_install(window, pane, deps.get_missing_managed_deps())
+        end),
+    },
+    {
+        key = 'o',
+        mods = 'CMD|SHIFT',
+        action = wezterm.action_callback(function(window, pane)
+          open_selected_http_url(window, pane)
+        end),
+    },
+    {
+        key = 'O',
+        mods = 'CMD|SHIFT',
+        action = wezterm.action_callback(function(window, pane)
+          open_selected_http_url(window, pane)
         end),
     },
     {
