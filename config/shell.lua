@@ -8,8 +8,5 @@ else
   shell_config.default_prog = { '/bin/zsh', '-l' }
 end
 
--- TERM（兼容部分 CLI 程序的识别逻辑）
-shell_config.term = 'xterm-256color'
-
 local init = require 'config/init'
 init.register('shell', shell_config)

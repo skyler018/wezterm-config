@@ -4,6 +4,14 @@ local deps = require 'config/deps'
 
 local keys_config = {}
 
+local function get_login_shell_args(...)
+  local args = { deps.get_shell(), '-ic', 'exec "$0" "$@"' }
+  for i = 1, select('#', ...) do
+    table.insert(args, select(i, ...))
+  end
+  return args
+end
+
 local function percent_decode(s)
   return (s:gsub('%%(%x%x)', function(hex)
     return string.char(tonumber(hex, 16))
@@ -227,14 +235,14 @@ local function split_traecli(window, pane)
   -- 像 yazi 一样先判断命令是否存在（按 PATH 查找）
   local trae_ok, trae_path = deps.command_exists('traecli')
   if trae_ok then
-    split_right({ 'zsh', '-ic', 'exec "$0" "$@"', trae_path or 'traecli' }, '正在打开 traecli…')
+    split_right(get_login_shell_args(trae_path or 'traecli'), '正在打开 traecli…')
     return
   end
 
   -- traecli 不存在时，尝试 fallback 到 claude（存在性判断与安装引导按 yazi 方式）
   local claude_ok, claude_path = deps.command_exists('claude')
   if claude_ok then
-    split_right({ 'zsh', '-ic', 'exec "$0" "$@"', claude_path or 'claude' }, '未检测到 traecli，正在打开 claude…')
+    split_right(get_login_shell_args(claude_path or 'claude'), '未检测到 traecli，正在打开 claude…')
     return
   end
 
@@ -267,7 +275,7 @@ keys_config.keys = {
         action = wezterm.action_callback(function(window, pane)
           local ok, yazi_path = deps.command_exists('yazi')
           if not ok then
-            deps.prompt_install(window, pane, deps.get_missing_managed_deps())
+            deps.prompt_install(window, pane, deps.get_missing_dep('yazi'))
             return
           end
 
@@ -276,7 +284,7 @@ keys_config.keys = {
             window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
           end
 
-          local args = { 'zsh', '-ic', 'exec "$0" "$@"', yazi_path or 'yazi' }
+          local args = get_login_shell_args(yazi_path or 'yazi')
           -- yazi 支持传入初始目录：yazi <dir>
           if cwd and #cwd > 0 then
             table.insert(args, cwd)
@@ -301,7 +309,7 @@ keys_config.keys = {
         action = wezterm.action_callback(function(window, pane)
           local ok, lazygit_path = deps.command_exists('lazygit')
           if not ok then
-            deps.prompt_install(window, pane, deps.get_missing_managed_deps())
+            deps.prompt_install(window, pane, deps.get_missing_dep('lazygit'))
             return
           end
 
@@ -313,7 +321,7 @@ keys_config.keys = {
             act.SpawnCommandInNewTab({
               domain = 'CurrentPaneDomain',
               cwd = cwd,
-              args = { 'zsh', '-ic', 'exec "$0" "$@"', lazygit_path or 'lazygit', '-p', cwd or '.' },
+              args = get_login_shell_args(lazygit_path or 'lazygit', '-p', cwd or '.'),
               set_environment_variables = {
                 PATH = os.getenv('PATH'),
               },

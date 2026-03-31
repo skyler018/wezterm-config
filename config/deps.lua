@@ -48,6 +48,14 @@ function M.get_missing_managed_deps()
   return missing
 end
 
+function M.get_missing_dep(bin)
+  local missing = M.get_missing_for_bins({ bin })
+  if #missing > 0 then
+    return missing
+  end
+  return {}
+end
+
 function M.get_missing_for_bins(bins)
   if type(bins) ~= 'table' or #bins == 0 then
     return {}
@@ -142,8 +150,12 @@ function M.prompt_install(window, pane, missing)
         if id == 'install' then
           M.install_with_brew(win, p, missing)
         elseif id == 'open_brew' then
-          -- 使用系统 open 打开网页
-          win:perform_action(act.SpawnCommandInNewTab({ args = { '/usr/bin/open', 'https://brew.sh' } }), p)
+          local ok, err = pcall(function()
+            wezterm.open_with('https://brew.sh')
+          end)
+          if not ok then
+            win:toast_notification('WezTerm', '打开 brew.sh 失败：' .. tostring(err), nil, 8000)
+          end
         end
       end),
     }),
