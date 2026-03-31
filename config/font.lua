@@ -1,12 +1,12 @@
 local wezterm = require 'wezterm'
 
 local font_config = {}
+local base_font_family = 'JetBrainsMono Nerd Font'
 
 -- 字体
 font_config.font = wezterm.font_with_fallback({
-  { family = 'JetBrainsMono Nerd Font', weight = 'Bold' },
-  --{ family = 'Maple Mono NF CN', weight = 'Regular' },
-  -- Omit explicit CJK font; macOS selects the best one based on locale.
+  { family = base_font_family, weight = 'Bold' },
+  'Symbols Nerd Font Mono',
   'Apple Color Emoji',
 })
 font_config.font_rules = {
@@ -14,7 +14,8 @@ font_config.font_rules = {
   {
     intensity = 'Half',
     font = wezterm.font_with_fallback({
-      { family = 'JetBrainsMono Nerd Font', weight = 'Bold' },
+      { family = base_font_family, weight = 'Regular' },
+      'Symbols Nerd Font Mono',
     }),
   },
   -- Normal italic: disable real italics (keep upright)
@@ -22,14 +23,16 @@ font_config.font_rules = {
     intensity = 'Normal',
     italic = true,
     font = wezterm.font_with_fallback({
-      { family = 'JetBrainsMono Nerd Font', weight = 'Bold', italic = false },
+      { family = base_font_family, weight = 'Bold', italic = false },
+      'Symbols Nerd Font Mono',
     }),
   },
   -- Bold: keep consistent with base font weight
   {
     intensity = 'Bold',
     font = wezterm.font_with_fallback({
-      { family = 'JetBrainsMono Nerd Font', weight = 'Bold' },
+      { family = base_font_family, weight = 'Bold' },
+      'Symbols Nerd Font Mono',
     }),
   },
 }
