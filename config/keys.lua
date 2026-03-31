@@ -321,7 +321,37 @@ keys_config.keys = {
             act.SpawnCommandInNewTab({
               domain = 'CurrentPaneDomain',
               cwd = cwd,
-              args = get_login_shell_args(lazygit_path or 'lazygit', '-p', cwd or '.'),
+              -- 直接执行 lazygit，避免交互 shell 初始化输出/错误干扰全屏 TUI 启动。
+              args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
+              set_environment_variables = {
+                PATH = os.getenv('PATH'),
+              },
+            }),
+            pane
+          )
+        end),
+    },
+    -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为大写
+    {
+        key = "G",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(function(window, pane)
+          local ok, lazygit_path = deps.command_exists('lazygit')
+          if not ok then
+            deps.prompt_install(window, pane, deps.get_missing_dep('lazygit'))
+            return
+          end
+
+          local cwd = get_pane_cwd(pane)
+          if not cwd then
+            window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
+          end
+          window:perform_action(
+            act.SpawnCommandInNewTab({
+              domain = 'CurrentPaneDomain',
+              cwd = cwd,
+              -- 直接执行 lazygit，避免交互 shell 初始化输出/错误干扰全屏 TUI 启动。
+              args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
               set_environment_variables = {
                 PATH = os.getenv('PATH'),
               },
