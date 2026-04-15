@@ -168,7 +168,7 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_wid
     label = label .. ' · ' .. suffix
   end
 
-  label = fit_to_width(label, math.max(8, (max_width or 0) - 4))
+  label = fit_to_width(label, math.max(16, (max_width or 0) + 1))
 
   return {
     { Attribute = { Intensity = 'Bold' } },
