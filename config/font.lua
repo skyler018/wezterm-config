@@ -27,11 +27,11 @@ font_config.font_rules = {
 			"Symbols Nerd Font Mono",
 		}),
 	},
-	-- Bold: keep consistent with base font weight
+	-- Bold: keep visual emphasis for terminal UIs and prompts
 	{
 		intensity = "Bold",
 		font = wezterm.font_with_fallback({
-			{ family = base_font_family, weight = "Regular" },
+			{ family = base_font_family, weight = "Bold" },
 			"Symbols Nerd Font Mono",
 		}),
 	},
