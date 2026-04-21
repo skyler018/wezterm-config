@@ -5,7 +5,7 @@ local base_font_family = "JetBrainsMono Nerd Font"
 
 -- 字体
 font_config.font = wezterm.font_with_fallback({
-	{ family = base_font_family, weight = "Regular" },
+	{ family = base_font_family, weight = "Bold" },
 	"Symbols Nerd Font Mono",
 	"Apple Color Emoji",
 })
@@ -14,7 +14,7 @@ font_config.font_rules = {
 	{
 		intensity = "Half",
 		font = wezterm.font_with_fallback({
-			{ family = base_font_family, weight = "Regular" },
+			{ family = base_font_family, weight = "Bold" },
 			"Symbols Nerd Font Mono",
 		}),
 	},
@@ -23,7 +23,7 @@ font_config.font_rules = {
 		intensity = "Normal",
 		italic = true,
 		font = wezterm.font_with_fallback({
-			{ family = base_font_family, weight = "Regular", italic = false },
+			{ family = base_font_family, weight = "Bold", italic = false },
 			"Symbols Nerd Font Mono",
 		}),
 	},
