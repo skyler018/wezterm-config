@@ -61,14 +61,11 @@
 - 关闭滚动条（见 `config/cursor.lua:8`）
 - 自定义鼠标选择的单词边界字符（见 `config/cursor.lua:11`）
 
-### `config/tabs.lua`：Tab 栏与标题格式
+### `config/tabs.lua`：Tab 栏
 
-- Tab 栏在底部、使用 fancy tab bar、仅 1 个 tab 时隐藏（见 `config/tabs.lua:7`）
-- `format-tab-title` 事件：
-  - 标题中包含 tab 序号（从 1 开始）（见 `config/tabs.lua:125`）
-  - 根据前台进程名推断 icon：nvim/vim、ssh/henv、docker、git；否则给一个默认 shell icon（见 `config/tabs.lua:131`）
-  - 若 pane title 非空优先使用 title，否则回退使用进程名（见 `config/tabs.lua:70`）
-  - 标题片段设置了 `Intensity = Bold`；实际“字形粗细”仍由 `window_frame.font` 决定（见 `config/tabs.lua:169`、`config/window.lua:24`）
+- 参考 `KevinSilvester/wezterm-config` 的 tab 配置，仅保留一个差异：`tab_bar_at_bottom = true`
+- 启用 tab bar、关闭 fancy tab bar、tab 最大宽度为 `25`、关闭 tab index 显示（见 `config/tabs.lua:4`）
+- 仅 1 个 tab 时仍显示 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:6`）
 
 ### `config/theme.lua`：主题
 
@@ -109,7 +106,7 @@
 
 ## 依赖与建议
 
-- 建议安装字体：`JetBrainsMono Nerd Font`（Tab 标题的 icon 依赖 Nerd Font 字形，见 `config/tabs.lua:132`）
+- 建议安装字体：`JetBrainsMono Nerd Font`
 - 可选依赖：`yazi`、`lazygit`、`claude`、`codex`（会在启动或按快捷键时检测并提示安装，见 `config/deps.lua:172`）
 
 ## 自定义入口

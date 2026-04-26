@@ -42,11 +42,10 @@ The config system lives in `config/init.lua` and works as follows:
 Several functions handle differences between WezTerm releases:
 - `get_pane_cwd(pane)` in `keys.lua` — resolves cwd from either Url object or string, with fallback manual parsing
 - `tab_has_multiple_panes(window)` in `keys.lua` — tries `tab:panes()` then `tab:panes_with_info()`
-- `cwd_basename(cwd)` in `tabs.lua` — similar Url/string handling for tab titles
 
-### Tab title disambiguation
+### Tabs
 
-`tabs.lua` `format-tab-title` detects duplicate tab labels across tabs and appends context suffixes (directory basename, pane ID for editors). The `resurrect.lua` module loads the resurrect.wezterm plugin from GitHub and injects `CMD+SHIFT+s` (save) and `CMD+SHIFT+r` (restore) keybindings into the keys config.
+`tabs.lua` is intentionally simple and mirrors the tab options from `KevinSilvester/wezterm-config`, with one local override: `tab_bar_at_bottom = true`. The `resurrect.lua` module loads the resurrect.wezterm plugin from GitHub and injects `CMD+SHIFT+s` (save) and `CMD+SHIFT+r` (restore) keybindings into the keys config.
 
 ### Color schemes
 
