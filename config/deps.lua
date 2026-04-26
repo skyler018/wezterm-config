@@ -8,6 +8,7 @@ local MANAGED_BINS = {
   { bin = 'yazi', brew = 'yazi' },
   { bin = 'lazygit', brew = 'lazygit' },
   { bin = 'claude', brew = 'claude' },
+  { bin = 'codex', brew = 'codex' },
 }
 
 local function trim(s)

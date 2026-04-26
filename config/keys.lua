@@ -216,6 +216,90 @@ local function prefer_one_third_for_traecli(window, pane)
   return false
 end
 
+local function split_claude(window, pane)
+  local percent = prefer_one_third_for_traecli(window, pane) and 33 or 50
+
+  if not window or not pane then
+    return
+  end
+
+  local function split_right(args, toast_title)
+    if toast_title and #toast_title > 0 then
+      window:toast_notification('WezTerm', toast_title, nil, 1200)
+    end
+
+    local ok, err = pcall(function()
+      window:perform_action(
+        act.SplitPane({
+          direction = 'Right',
+          size = { Percent = percent },
+          command = {
+            args = args,
+            set_environment_variables = {
+              PATH = os.getenv('PATH'),
+            },
+          },
+        }),
+        pane
+      )
+    end)
+    if not ok then
+      window:toast_notification('WezTerm', '打开分屏失败：' .. tostring(err), nil, 8000)
+    end
+  end
+
+  local claude_ok, claude_path = deps.command_exists('claude')
+  if claude_ok then
+    split_right(get_login_shell_args(claude_path or 'claude'), '正在打开 claude…')
+    return
+  end
+
+  window:toast_notification('WezTerm', '未检测到 claude，将引导安装…', nil, 4000)
+  deps.prompt_install(window, pane, deps.get_missing_dep('claude'))
+end
+
+local function split_codex(window, pane)
+  local percent = prefer_one_third_for_traecli(window, pane) and 33 or 50
+
+  if not window or not pane then
+    return
+  end
+
+  local function split_right(args, toast_title)
+    if toast_title and #toast_title > 0 then
+      window:toast_notification('WezTerm', toast_title, nil, 1200)
+    end
+
+    local ok, err = pcall(function()
+      window:perform_action(
+        act.SplitPane({
+          direction = 'Right',
+          size = { Percent = percent },
+          command = {
+            args = args,
+            set_environment_variables = {
+              PATH = os.getenv('PATH'),
+            },
+          },
+        }),
+        pane
+      )
+    end)
+    if not ok then
+      window:toast_notification('WezTerm', '打开分屏失败：' .. tostring(err), nil, 8000)
+    end
+  end
+
+  local codex_ok, codex_path = deps.command_exists('codex')
+  if codex_ok then
+    split_right(get_login_shell_args(codex_path or 'codex'), '正在打开 codex…')
+    return
+  end
+
+  window:toast_notification('WezTerm', '未检测到 codex，将引导安装…', nil, 4000)
+  deps.prompt_install(window, pane, deps.get_missing_dep('codex'))
+end
+
 local function split_traecli(window, pane)
   local percent = prefer_one_third_for_traecli(window, pane) and 33 or 50
 
@@ -235,7 +319,7 @@ local function split_traecli(window, pane)
           -- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
           direction = 'Right',
           size = { Percent = percent },
-          command = { 
+          command = {
             args = args,
             set_environment_variables = {
               PATH = os.getenv('PATH'),
@@ -348,6 +432,28 @@ keys_config.keys = {
         key = 'O',
         mods = 'CMD|SHIFT',
         action = wezterm.action_callback(open_selected_http_url),
+    },
+    {
+        key = "A",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(split_claude),
+    },
+    -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
+    {
+        key = "a",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(split_claude),
+    },
+    {
+        key = "X",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(split_codex),
+    },
+    -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
+    {
+        key = "x",
+        mods = "CMD|SHIFT",
+        action = wezterm.action_callback(split_codex),
     },
     {
         key = "T",
