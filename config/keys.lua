@@ -12,12 +12,6 @@ local function get_login_shell_args(...)
   return args
 end
 
-local function percent_decode(s)
-  return (s:gsub('%%(%x%x)', function(hex)
-    return string.char(tonumber(hex, 16))
-  end))
-end
-
 local function get_pane_cwd(pane)
   local cwd_uri = pane:get_current_working_dir()
   if not cwd_uri then
@@ -48,7 +42,7 @@ local function get_pane_cwd(pane)
     local p = cwd_str:gsub('^file://', '')
     -- file:///Users/foo -> /Users/foo
     p = p:gsub('^/*', '/')
-    return percent_decode(p)
+    return deps.percent_decode(p)
   end
 
   return nil
@@ -85,6 +79,30 @@ local function extract_http_url(text)
   end
   -- 尽量贴近 RFC3986：允许常见 URL 字符，排除空白与引号等分隔符
   return text:match("https?://[%w%-%._~:/%?#%[%]@!$&'%(%)*%+,;=]+")
+end
+
+local function open_lazygit(window, pane)
+  local ok, lazygit_path = deps.command_exists('lazygit')
+  if not ok then
+    deps.prompt_install(window, pane, deps.get_missing_dep('lazygit'))
+    return
+  end
+
+  local cwd = get_pane_cwd(pane)
+  if not cwd then
+    window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
+  end
+  window:perform_action(
+    act.SpawnCommandInNewTab({
+      domain = 'CurrentPaneDomain',
+      cwd = cwd,
+      args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
+      set_environment_variables = {
+        PATH = os.getenv('PATH'),
+      },
+    }),
+    pane
+  )
 end
 
 local function open_selected_http_url(window, pane)
@@ -306,59 +324,13 @@ keys_config.keys = {
     {
         key = "g",
         mods = "CMD|SHIFT",
-        action = wezterm.action_callback(function(window, pane)
-          local ok, lazygit_path = deps.command_exists('lazygit')
-          if not ok then
-            deps.prompt_install(window, pane, deps.get_missing_dep('lazygit'))
-            return
-          end
-
-          local cwd = get_pane_cwd(pane)
-          if not cwd then
-            window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
-          end
-          window:perform_action(
-            act.SpawnCommandInNewTab({
-              domain = 'CurrentPaneDomain',
-              cwd = cwd,
-              -- 直接执行 lazygit，避免交互 shell 初始化输出/错误干扰全屏 TUI 启动。
-              args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
-              set_environment_variables = {
-                PATH = os.getenv('PATH'),
-              },
-            }),
-            pane
-          )
-        end),
+        action = wezterm.action_callback(open_lazygit),
     },
     -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为大写
     {
         key = "G",
         mods = "CMD|SHIFT",
-        action = wezterm.action_callback(function(window, pane)
-          local ok, lazygit_path = deps.command_exists('lazygit')
-          if not ok then
-            deps.prompt_install(window, pane, deps.get_missing_dep('lazygit'))
-            return
-          end
-
-          local cwd = get_pane_cwd(pane)
-          if not cwd then
-            window:toast_notification('WezTerm', '未能获取当前 pane 的工作目录（将回退到 $HOME）', nil, 6000)
-          end
-          window:perform_action(
-            act.SpawnCommandInNewTab({
-              domain = 'CurrentPaneDomain',
-              cwd = cwd,
-              -- 直接执行 lazygit，避免交互 shell 初始化输出/错误干扰全屏 TUI 启动。
-              args = { lazygit_path or 'lazygit', '-p', cwd or '.' },
-              set_environment_variables = {
-                PATH = os.getenv('PATH'),
-              },
-            }),
-            pane
-          )
-        end),
+        action = wezterm.action_callback(open_lazygit),
     },
     {
         key = "i",
@@ -370,31 +342,23 @@ keys_config.keys = {
     {
         key = 'o',
         mods = 'CMD|SHIFT',
-        action = wezterm.action_callback(function(window, pane)
-          open_selected_http_url(window, pane)
-        end),
+        action = wezterm.action_callback(open_selected_http_url),
     },
     {
         key = 'O',
         mods = 'CMD|SHIFT',
-        action = wezterm.action_callback(function(window, pane)
-          open_selected_http_url(window, pane)
-        end),
+        action = wezterm.action_callback(open_selected_http_url),
     },
     {
         key = "T",
         mods = "CMD|SHIFT",
-        action = wezterm.action_callback(function(window, pane)
-          split_traecli(window, pane)
-        end),
+        action = wezterm.action_callback(split_traecli),
     },
     -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
     {
         key = "t",
         mods = "CMD|SHIFT",
-        action = wezterm.action_callback(function(window, pane)
-          split_traecli(window, pane)
-        end),
+        action = wezterm.action_callback(split_traecli),
     },
     {
         key = "h",

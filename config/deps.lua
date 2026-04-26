@@ -19,6 +19,12 @@ local function shell_quote(s)
   return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
 end
 
+function M.percent_decode(s)
+  return (s:gsub('%%(%x%x)', function(hex)
+    return string.char(tonumber(hex, 16))
+  end))
+end
+
 function M.get_shell()
   local shell = os.getenv('SHELL')
   if shell and #shell > 0 then
@@ -49,11 +55,7 @@ function M.get_missing_managed_deps()
 end
 
 function M.get_missing_dep(bin)
-  local missing = M.get_missing_for_bins({ bin })
-  if #missing > 0 then
-    return missing
-  end
-  return {}
+  return M.get_missing_for_bins({ bin })
 end
 
 function M.get_missing_for_bins(bins)

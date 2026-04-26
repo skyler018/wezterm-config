@@ -1,5 +1,3 @@
---local wezterm = require 'wezterm'
-
 local theme_config = {}
 
 -- 主题

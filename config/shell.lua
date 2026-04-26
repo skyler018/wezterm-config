@@ -1,6 +1,7 @@
 local shell_config = {}
 
 -- ===== Shell =====
+shell_config.term = 'xterm-256color'
 local user_shell = os.getenv('SHELL')
 if user_shell and #user_shell > 0 then
   shell_config.default_prog = { user_shell, '-l' }

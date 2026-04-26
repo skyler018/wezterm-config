@@ -24,24 +24,24 @@
 
 ### `config/deps.lua`：按需依赖检测与安装提示
 
-- 仅管理与快捷键强相关的第三方工具：`yazi`、`lazygit`（见 `config/deps.lua:7`）
+- 仅管理与快捷键强相关的第三方工具：`yazi`、`lazygit`、`claude`
 - 启动 GUI 时执行一次检测（同一 WezTerm GUI 进程内只提示一次），缺失则弹出选择器引导安装（见 `config/deps.lua:129`）
 - 若检测到 `brew`：可一键在新标签页执行 `brew install ...`（见 `config/deps.lua:58`）
 - 若未检测到 `brew`：提示并可打开 `https://brew.sh`（见 `config/deps.lua:60`）
 
 ### `config/font.lua`：字体与渲染
 
-- 终端字体使用 `JetBrainsMono Nerd Font`（含 Nerd Font 图标），并回退到 `Apple Color Emoji`（见 `config/font.lua:6`）
-- 通过 `font_rules` 调整不同强度/斜体的实际用字重与是否使用真斜体（见 `config/font.lua:12`）
+- 终端字体使用 `JetBrainsMono Nerd Font`（Medium 字重）+ Nerd Font Symbols + `Apple Color Emoji` 回退
+- 通过 `font_rules` 调整不同强度/斜体的字重：Normal/Half 使用 Medium，Bold 使用 Bold 以提供视觉区分
 - 基础参数：`font_size = 16.0`、`line_height = 1.1`、关闭连字（`harfbuzz_features`）（见 `config/font.lua:39`）
 
 ### `config/window.lua`：窗口外观
 
 - 初始窗口大小：`110x30`（见 `config/window.lua:6`）
 - 启用 `use_resize_increments`，让窗口缩放按字符栅格递增（见 `config/window.lua:10`）
-- 内边距：左右 40px、顶部 70px、底部 20px（见 `config/window.lua:13`）
-- macOS 视觉效果：集成按钮标题栏、背景模糊、半透明（见 `config/window.lua:20`）
-- titlebar/Tab 标签使用 `window_frame.font`；当前配置为 `JetBrainsMono Nerd Font Bold`（见 `config/window.lua:24`）
+- 内边距：左右 20px、顶部 60px、底部 10px
+- macOS 视觉效果：集成按钮标题栏、背景模糊(20)、半透明(0.92)
+- titlebar/Tab 标签使用 `window_frame.font`：`JetBrainsMono Nerd Font Bold`、字号 15.0
 
 ### `config/macos.lua`：macOS 特性
 
@@ -51,7 +51,7 @@
 ### `config/shell.lua`：默认 Shell 与 TERM
 
 - 默认启动程序：优先使用 `$SHELL -l`，否则回退到 `/bin/zsh -l`（见 `config/shell.lua:4`）
-- `term = xterm-256color`，兼容部分 CLI 程序识别逻辑（见 `config/shell.lua:12`）
+- `term = xterm-256color`，兼容部分 CLI 程序识别逻辑
 
 ### `config/cursor.lua`：光标与滚动
 
@@ -71,7 +71,7 @@
 
 ### `config/theme.lua`：主题
 
-- 当前启用 `Default Dark (base16)`（见 `config/theme.lua:9`）
+- 当前启用 `Tokyo Night`
 - 其他主题在文件中以注释形式保留，可直接切换（见 `config/theme.lua:6`）
 
 ### `config/keys.lua`：键位与鼠标行为

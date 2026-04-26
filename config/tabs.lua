@@ -1,4 +1,5 @@
 local wezterm = require 'wezterm'
+local deps = require 'config/deps'
 
 local tabs_config = {}
 
@@ -14,12 +15,6 @@ end
 
 local function trim(text)
   return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-local function percent_decode(s)
-  return (s:gsub('%%(%x%x)', function(hex)
-    return string.char(tonumber(hex, 16))
-  end))
 end
 
 local function cwd_basename(cwd)
@@ -38,7 +33,7 @@ local function cwd_basename(cwd)
         path = resolved
       end
     elseif path:match('^file://') then
-      path = percent_decode(path:gsub('^file://', ''):gsub('^/*', '/'))
+      path = deps.percent_decode(path:gsub('^file://', ''):gsub('^/*', '/'))
     end
   end
 

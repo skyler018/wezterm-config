@@ -5,16 +5,16 @@ local base_font_family = "JetBrainsMono Nerd Font"
 
 -- 字体
 font_config.font = wezterm.font_with_fallback({
-	{ family = base_font_family, weight = "Bold" },
+	{ family = base_font_family, weight = "Medium" },
 	"Symbols Nerd Font Mono",
 	"Apple Color Emoji",
 })
 font_config.font_rules = {
-	-- Prevent thin weight: use Regular instead of Light for Half intensity
+	-- Prevent thin weight: use Medium instead of Light for Half intensity
 	{
 		intensity = "Half",
 		font = wezterm.font_with_fallback({
-			{ family = base_font_family, weight = "Bold" },
+			{ family = base_font_family, weight = "Medium" },
 			"Symbols Nerd Font Mono",
 		}),
 	},
@@ -23,11 +23,11 @@ font_config.font_rules = {
 		intensity = "Normal",
 		italic = true,
 		font = wezterm.font_with_fallback({
-			{ family = base_font_family, weight = "Bold", italic = false },
+			{ family = base_font_family, weight = "Medium", italic = false },
 			"Symbols Nerd Font Mono",
 		}),
 	},
-	-- Bold: keep visual emphasis for terminal UIs and prompts
+	-- Bold: use Bold weight for real visual emphasis distinct from normal text
 	{
 		intensity = "Bold",
 		font = wezterm.font_with_fallback({
