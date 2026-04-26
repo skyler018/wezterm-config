@@ -123,19 +123,34 @@ wezterm.on('format-tab-title', function(tab, tabs, panes, config, hover, max_wid
   local text_colors = COLORS['text_' .. state]
   local edge_colors = COLORS['scircle_' .. state]
   local title = create_title(tab, max_width)
+  local active_indicator = tab.is_active and {
+    { Foreground = { Color = '#f38ba8' } },
+    { Text = '● ' },
+  } or nil
 
-  return {
+  local cells = {
     { Background = { Color = edge_colors.bg } },
     { Foreground = { Color = edge_colors.fg } },
     { Text = ICON_LEFT },
     { Background = { Color = text_colors.bg } },
     { Foreground = { Color = text_colors.fg } },
     { Attribute = { Intensity = 'Bold' } },
-    { Text = ' ' .. title .. ' ' },
+    { Text = ' ' },
     { Background = { Color = edge_colors.bg } },
     { Foreground = { Color = edge_colors.fg } },
     { Text = ICON_RIGHT },
   }
+
+  if active_indicator then
+    table.insert(cells, 7, active_indicator[1])
+    table.insert(cells, 8, active_indicator[2])
+    table.insert(cells, 9, { Foreground = { Color = text_colors.fg } })
+    table.insert(cells, 10, { Text = title .. ' ' })
+  else
+    table.insert(cells, 7, { Text = title .. ' ' })
+  end
+
+  return cells
 end)
 
 local init = require 'config/init'
