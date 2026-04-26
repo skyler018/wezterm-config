@@ -3,8 +3,8 @@ local wezterm = require("wezterm")
 local window_config = {}
 
 -- 初始化窗口大小
-window_config.initial_cols = 110
-window_config.initial_rows = 30
+window_config.initial_cols = 140
+window_config.initial_rows = 38
 
 -- Resize 行为
 window_config.use_resize_increments = true
