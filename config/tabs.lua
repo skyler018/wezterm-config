@@ -5,7 +5,7 @@ local nf = wezterm.nerdfonts
 
 tabs_config.enable_tab_bar = true
 tabs_config.tab_bar_at_bottom = true
-tabs_config.hide_tab_bar_if_only_one_tab = false
+tabs_config.hide_tab_bar_if_only_one_tab = true
 tabs_config.use_fancy_tab_bar = false
 tabs_config.tab_max_width = 25
 tabs_config.show_tab_index_in_tab_bar = false

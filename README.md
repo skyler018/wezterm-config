@@ -65,7 +65,7 @@
 
 - 参考 `KevinSilvester/wezterm-config` 的 tab 配置，仅保留一个差异：`tab_bar_at_bottom = true`
 - 启用 tab bar、关闭 fancy tab bar、tab 最大宽度为 `25`、关闭 tab index 显示（见 `config/tabs.lua:4`）
-- 仅 1 个 tab 时仍显示 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:6`）
+- 仅 1 个 tab 时隐藏 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:6`）
 
 ### `config/theme.lua`：主题
 
