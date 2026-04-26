@@ -13,7 +13,7 @@ window_config.use_resize_increments = true
 window_config.window_padding = {
 	left = "20px",
 	right = "20px",
-	top = "40px",
+	top = "60px",
 	bottom = "10px",
 }
 
