@@ -24,20 +24,21 @@
 
 ### `config/deps.lua`：按需依赖检测与安装提示
 
-- 仅管理与快捷键强相关的第三方工具：`yazi`、`lazygit`、`claude`
-- 启动 GUI 时执行一次检测（同一 WezTerm GUI 进程内只提示一次），缺失则弹出选择器引导安装（见 `config/deps.lua:129`）
-- 若检测到 `brew`：可一键在新标签页执行 `brew install ...`（见 `config/deps.lua:58`）
-- 若未检测到 `brew`：提示并可打开 `https://brew.sh`（见 `config/deps.lua:60`）
+- 管理与快捷键强相关的第三方工具：`yazi`、`lazygit`、`claude`、`codex`
+- 启动 GUI 时执行一次检测（同一 WezTerm GUI 进程内只提示一次），缺失则弹出选择器引导安装（见 `config/deps.lua:172`）
+- 若检测到 `brew`：可一键在新标签页执行 `brew install ...`（见 `config/deps.lua:94`）
+- 若未检测到 `brew`：提示并可打开 `https://brew.sh`（见 `config/deps.lua:97`）
+- 提供 `percent_decode()` 工具函数，供 `keys.lua` 和 `tabs.lua` 共用
 
 ### `config/font.lua`：字体与渲染
 
 - 终端字体使用 `JetBrainsMono Nerd Font`（Medium 字重）+ Nerd Font Symbols + `Apple Color Emoji` 回退
-- 通过 `font_rules` 调整不同强度/斜体的字重：Normal/Half 使用 Medium，Bold 使用 Bold 以提供视觉区分
+- 通过 `font_rules` 调整不同强度/斜体的字重：Half/Normal/Normal-Italic 使用 Medium，Bold 使用 Bold 以提供视觉区分
 - 基础参数：`font_size = 16.0`、`line_height = 1.1`、关闭连字（`harfbuzz_features`）（见 `config/font.lua:39`）
 
 ### `config/window.lua`：窗口外观
 
-- 初始窗口大小：`110x30`（见 `config/window.lua:6`）
+- 初始窗口大小：`140x38`（见 `config/window.lua:6`）
 - 启用 `use_resize_increments`，让窗口缩放按字符栅格递增（见 `config/window.lua:10`）
 - 内边距：左右 20px、顶部 60px、底部 10px
 - macOS 视觉效果：集成按钮标题栏、背景模糊(20)、半透明(0.92)
@@ -62,12 +63,12 @@
 
 ### `config/tabs.lua`：Tab 栏与标题格式
 
-- Tab 栏在底部、使用 fancy tab bar、仅 1 个 tab 时隐藏（见 `config/tabs.lua:6`）
+- Tab 栏在底部、使用 fancy tab bar、仅 1 个 tab 时隐藏（见 `config/tabs.lua:7`）
 - `format-tab-title` 事件：
-  - 标题中包含 tab 序号（从 1 开始）（见 `config/tabs.lua:18`）
-  - 根据前台进程名推断 icon：nvim/vim、ssh/henv、docker、git；否则给一个默认 shell icon（见 `config/tabs.lua:25`）
-  - 若 pane title 非空优先使用 title，否则回退使用进程名（见 `config/tabs.lua:46`）
-  - 标题片段设置了 `Intensity = Bold`；实际“字形粗细”仍由 `window_frame.font` 决定（见 `config/tabs.lua:48`、`config/window.lua:24`）
+  - 标题中包含 tab 序号（从 1 开始）（见 `config/tabs.lua:125`）
+  - 根据前台进程名推断 icon：nvim/vim、ssh/henv、docker、git；否则给一个默认 shell icon（见 `config/tabs.lua:131`）
+  - 若 pane title 非空优先使用 title，否则回退使用进程名（见 `config/tabs.lua:70`）
+  - 标题片段设置了 `Intensity = Bold`；实际“字形粗细”仍由 `window_frame.font` 决定（见 `config/tabs.lua:169`、`config/window.lua:24`）
 
 ### `config/theme.lua`：主题
 
@@ -78,35 +79,38 @@
 
 鼠标：
 
-- 左键选中后松开：复制到 Clipboard + PrimarySelection（见 `config/keys.lua:127`）
-- 右键按下：从 Clipboard 粘贴（见 `config/keys.lua:136`）
+- 左键双击选词后松开：复制到 Clipboard + PrimarySelection（见 `config/keys.lua:356`）
+- 右键按下：从 Clipboard 粘贴（见 `config/keys.lua:365`）
 
 快捷键（macOS）：
 
-- `CMD+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录（见 `config/keys.lua:146`）
-- `CMD+SHIFT+g`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录（见 `config/keys.lua:177`）
-- `CMD+SHIFT+i`：手动弹出依赖安装提示（见 `config/keys.lua:201`）
-- `CMD+SHIFT+t`：右侧分屏启动 `traecli`（按 `PATH` 查找）；若未检测到则 fallback 启动 `claude`；二者都不存在会引导安装 `claude`（见 `config/keys.lua:139`）
+- `CMD+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录（见 `config/keys.lua:374`）
+- `CMD+SHIFT+g`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录（见 `config/keys.lua:408`）
+- `CMD+SHIFT+i`：手动弹出依赖安装提示（见 `config/keys.lua:419`）
+- `CMD+SHIFT+t`：右侧分屏启动 `traecli`（按 `PATH` 查找）；若未检测到则 fallback 启动 `claude`；二者都不存在会引导安装 `claude`（见 `config/keys.lua:458`）
+- `CMD+SHIFT+a`：右侧分屏启动 `claude`；若未检测到则引导安装（见 `config/keys.lua:436`）
+- `CMD+SHIFT+x`：右侧分屏启动 `codex`；若未检测到则引导安装（见 `config/keys.lua:447`）
+- `CMD+SHIFT+o`：在浏览器中打开当前选中文本中的 http/https 链接（见 `config/keys.lua:426`）
 
-- Pane 焦点移动：`CMD+h/j/k/l`（见 `config/keys.lua:213`）
-- 进入复制模式：`CMD+SHIFT+c`（见 `config/keys.lua:229`）
+- Pane 焦点移动：`CMD+h/j/k/l`（见 `config/keys.lua:469`）
+- 进入复制模式：`CMD+SHIFT+c`（见 `config/keys.lua:486`）
 
 - Pane 缩放（按比例调整，仅同一 tab 存在多个 pane 时生效）：
   - 左/右：`CMD+SHIFT+h/l`（以及 `H/L`）
   - 上/下：`CMD+SHIFT+k/j`（以及 `K/J`）
-  - 步进为当前 pane 尺寸的 `5%`，并对最大步进做了限制（见 `config/keys.lua:49`）
+  - 步进为当前 pane 尺寸的 `5%`，并对最大步进做了限制（见 `config/keys.lua:129`）
 
-- 新窗口：`CMD+n`（见 `config/keys.lua:298`）
-- 分屏：`CMD+d`（水平）、`CMD+SHIFT+D`（垂直）（见 `config/keys.lua:301`）
-- 关闭 pane：`CMD+w`（确认提示开启）（见 `config/keys.lua:305`）
-- 放大/还原当前 pane：`CMD+Enter`（见 `config/keys.lua:308`）
+- 新窗口：`CMD+n`（见 `config/keys.lua:555`）
+- 分屏：`CMD+d`（水平）、`CMD+SHIFT+D`（垂直）（见 `config/keys.lua:558`）
+- 关闭 pane：`CMD+w`（确认提示开启）（见 `config/keys.lua:562`）
+- 放大/还原当前 pane：`CMD+Enter`（见 `config/keys.lua:565`）
 
-此外，`keys.lua` 内部实现了 `get_pane_cwd()` 以兼容不同 WezTerm 版本返回的 cwd 类型（Url 对象/字符串），并提供多级兜底解析（见 `config/keys.lua:13`）。
+此外，`keys.lua` 内部实现了 `get_pane_cwd()` 以兼容不同 WezTerm 版本返回的 cwd 类型（Url 对象/字符串），并提供多级兜底解析（见 `config/keys.lua:15`）。
 
 ## 依赖与建议
 
-- 建议安装字体：`JetBrainsMono Nerd Font`（Tab 标题的 icon 依赖 Nerd Font 字形，见 `config/tabs.lua:28`）
-- 可选依赖：`yazi`、`lazygit`、`claude`（会在启动或按快捷键时检测并提示安装，见 `config/deps.lua:164`）
+- 建议安装字体：`JetBrainsMono Nerd Font`（Tab 标题的 icon 依赖 Nerd Font 字形，见 `config/tabs.lua:132`）
+- 可选依赖：`yazi`、`lazygit`、`claude`、`codex`（会在启动或按快捷键时检测并提示安装，见 `config/deps.lua:172`）
 
 ## 自定义入口
 
