@@ -130,6 +130,7 @@ local RESIZE_PERCENT = 0.05
 local MAX_STEP_COLS = 30
 local MAX_STEP_ROWS = 15
 local tracked_ai_panes_by_tab = {}
+local pending_ai_adjust_generation_by_window = {}
 
 local function get_pane_id(pane)
   if not pane then
@@ -174,6 +175,41 @@ local function get_active_tab(window)
   end
 
   return nil
+end
+
+local function list_window_tabs(window)
+  if not window then
+    return {}
+  end
+
+  local ok, mux_window = pcall(function()
+    return window:mux_window()
+  end)
+  if not ok or not mux_window then
+    return {}
+  end
+
+  local ok_tabs, tabs = pcall(function()
+    return mux_window:tabs()
+  end)
+  if ok_tabs and type(tabs) == 'table' then
+    return tabs
+  end
+
+  local ok_tabs_info, tabs_info = pcall(function()
+    return mux_window:tabs_with_info()
+  end)
+  if ok_tabs_info and type(tabs_info) == 'table' then
+    local resolved_tabs = {}
+    for _, info in ipairs(tabs_info) do
+      if info and info.tab then
+        table.insert(resolved_tabs, info.tab)
+      end
+    end
+    return resolved_tabs
+  end
+
+  return {}
 end
 
 local function list_tab_panes(tab)
@@ -329,8 +365,22 @@ local function desired_ai_panel_percent(window, pane)
   return prefer_one_third_for_traecli(window, pane) and 33 or 50
 end
 
-local function adjust_tracked_ai_panel(window)
-  local tab = get_active_tab(window)
+local function get_window_id(window)
+  if not window then
+    return nil
+  end
+
+  local ok, window_id = pcall(function()
+    return window:window_id()
+  end)
+  if ok and window_id then
+    return window_id
+  end
+
+  return window.window_id
+end
+
+local function adjust_tracked_ai_panel_for_tab(window, tab)
   local tab_id = get_tab_id(tab)
   if not tab_id then
     return
@@ -407,13 +457,62 @@ local function adjust_tracked_ai_panel(window)
   window:perform_action(act.AdjustPaneSize({ dir, math.abs(delta) }), tracked_info.pane)
 end
 
-wezterm.on('window-resized', function(window, pane)
+local function adjust_tracked_ai_panels_in_window(window)
+  local tabs = list_window_tabs(window)
+  if #tabs == 0 then
+    local active_tab = get_active_tab(window)
+    if active_tab then
+      adjust_tracked_ai_panel_for_tab(window, active_tab)
+    end
+    return
+  end
+
+  for _, tab in ipairs(tabs) do
+    adjust_tracked_ai_panel_for_tab(window, tab)
+  end
+end
+
+local function safe_adjust_tracked_ai_panel(window)
+  if not window then
+    return
+  end
+
   local ok, err = pcall(function()
-    adjust_tracked_ai_panel(window)
+    adjust_tracked_ai_panels_in_window(window)
   end)
   if not ok then
     window:toast_notification('WezTerm', '自动调整 AI pane 大小失败：' .. tostring(err), nil, 5000)
   end
+end
+
+local function schedule_tracked_ai_panel_adjust(window)
+  if not window then
+    return
+  end
+
+  safe_adjust_tracked_ai_panel(window)
+
+  local window_id = get_window_id(window)
+  if not window_id or not wezterm.time or not wezterm.time.call_after then
+    return
+  end
+
+  local generation = (pending_ai_adjust_generation_by_window[window_id] or 0) + 1
+  pending_ai_adjust_generation_by_window[window_id] = generation
+
+  -- macOS 原生全屏切换是异步动画；补几次延迟调整，等待 pane 几何稳定。
+  for _, delay in ipairs({ 0.12, 0.35, 0.75 }) do
+    wezterm.time.call_after(delay, function()
+      if pending_ai_adjust_generation_by_window[window_id] ~= generation then
+        return
+      end
+      safe_adjust_tracked_ai_panel(window)
+    end)
+  end
+end
+
+wezterm.on('window-resized', function(window, pane)
+  schedule_tracked_ai_panel_adjust(window)
 end)
 
 local function split_claude(window, pane)
@@ -646,17 +745,6 @@ keys_config.keys = {
         action = wezterm.action_callback(open_selected_http_url),
     },
     {
-        key = "A",
-        mods = "CMD|SHIFT",
-        action = wezterm.action_callback(split_claude),
-    },
-    -- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
-    {
-        key = "a",
-        mods = "CMD|SHIFT",
-        action = wezterm.action_callback(split_claude),
-    },
-    {
         key = "X",
         mods = "CMD|SHIFT",
         action = wezterm.action_callback(split_codex),
@@ -695,15 +783,25 @@ keys_config.keys = {
         action = wezterm.action.ActivatePaneDirection("Up"),
     },
     {
+        key = 'C',
+        mods = 'CMD|SHIFT',
+        action = wezterm.action_callback(split_claude),
+    },
+    {
         key = 'c',
         mods = 'CMD|SHIFT',
-        action = wezterm.action.ActivateCopyMode,
+        action = wezterm.action_callback(split_claude),
     },
 
     {
         key = "j",
         mods = "CMD",
         action = wezterm.action.ActivatePaneDirection("Down"),
+    },
+    {
+        key = 'F1',
+        mods = 'NONE',
+        action = wezterm.action.ActivateCopyMode,
     },
 
     -- resize pane（仅在同 tab 多 pane 时生效）
