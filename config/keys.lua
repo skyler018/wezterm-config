@@ -551,7 +551,7 @@ local function split_claude(window, pane)
 
   local claude_ok, claude_path = deps.command_exists('claude')
   if claude_ok then
-    split_right(get_login_shell_args(claude_path or 'claude'), '正在打开 claude…')
+    split_right(get_login_shell_args(claude_path or 'claude', '--effort', 'max'), '正在打开 claude…')
     return
   end
 
