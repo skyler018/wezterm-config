@@ -76,14 +76,14 @@ The `colors/` directory is present but empty. Color schemes are handled via WezT
 |------|--------|
 | `CMD+SHIFT+y` | Open yazi in new tab (current pane cwd) |
 | `CMD+SHIFT+g/G` | Open lazygit in new tab (current pane cwd) |
-| `CMD+SHIFT+a/A` | Split right: claude |
+| `CMD+SHIFT+c/C` | Split right: claude |
 | `CMD+SHIFT+x/X` | Split right: codex |
 | `CMD+SHIFT+t/T` | Split right: traecli (fallback: claude) |
 | `CMD+SHIFT+o/O` | Open selected HTTP URL in browser |
 | `CMD+SHIFT+i` | Manually trigger dependency check/install prompt |
 | `CMD+SHIFT+s` | Save window+workspace state (resurrect) |
 | `CMD+SHIFT+r` | Fuzzy restore saved state (resurrect) |
-| `CMD+SHIFT+c` | Enter copy mode |
+| `F1` | Enter copy mode |
 | `CMD+h/j/k/l` | Navigate panes (left/down/up/right) |
 | `CMD+SHIFT+h/j/k/l` | Resize pane (H/J/K/L variants also work) |
 | `CMD+n` | New window |
