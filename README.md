@@ -48,6 +48,7 @@
 
 - 左 Option 作为 Meta（Alt）更利于 Vim/Neovim 等快捷键；右 Option 保留输入法组合键（见 `config/macos.lua:5`）
 - 启用原生全屏模式，不在关闭所有窗口时退出（见 `config/macos.lua:8`）
+- 窗口尺寸变化时，会自动调整当前 active tab 中已追踪的 AI pane 宽度：全屏偏向 `33%`，非全屏偏向 `50%`（逻辑在 `config/keys.lua`）
 
 ### `config/shell.lua`：默认 Shell 与 TERM
 

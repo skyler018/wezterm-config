@@ -457,18 +457,16 @@ local function adjust_tracked_ai_panel_for_tab(window, tab)
   window:perform_action(act.AdjustPaneSize({ dir, math.abs(delta) }), tracked_info.pane)
 end
 
-local function adjust_tracked_ai_panels_in_window(window)
-  local tabs = list_window_tabs(window)
-  if #tabs == 0 then
-    local active_tab = get_active_tab(window)
-    if active_tab then
-      adjust_tracked_ai_panel_for_tab(window, active_tab)
-    end
+local function adjust_tracked_ai_panel_in_active_tab(window)
+  local active_tab = get_active_tab(window)
+  if active_tab then
+    adjust_tracked_ai_panel_for_tab(window, active_tab)
     return
   end
 
-  for _, tab in ipairs(tabs) do
-    adjust_tracked_ai_panel_for_tab(window, tab)
+  local tabs = list_window_tabs(window)
+  if #tabs > 0 then
+    adjust_tracked_ai_panel_for_tab(window, tabs[1])
   end
 end
 
@@ -478,7 +476,7 @@ local function safe_adjust_tracked_ai_panel(window)
   end
 
   local ok, err = pcall(function()
-    adjust_tracked_ai_panels_in_window(window)
+    adjust_tracked_ai_panel_in_active_tab(window)
   end)
   if not ok then
     window:toast_notification('WezTerm', '自动调整 AI pane 大小失败：' .. tostring(err), nil, 5000)

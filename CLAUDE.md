@@ -49,9 +49,10 @@ Several functions handle differences between WezTerm releases:
 
 ### AI pane tracking and auto-resize (keys.lua)
 
-When an AI tool (claude, codex, traecli) is launched via a split keybinding, `remember_new_ai_pane()` records the new pane's ID in `tracked_ai_panes_by_tab` keyed by tab ID. This enables the `window-resized` event handler to call `adjust_tracked_ai_panel()` whenever the window is resized.
+When an AI tool (claude, codex, traecli) is launched via a split keybinding, `remember_new_ai_pane()` records the new pane's ID in `tracked_ai_panes_by_tab` keyed by tab ID. This enables the `window-resized` event handler to resize the tracked AI pane in the current active tab whenever the window is resized.
 
 The resize logic:
+- Only adjusts the tracked AI pane in the current active tab of the resized window.
 - Only applies when the tracked pane is the rightmost pane in the tab.
 - Adjusts to 33% width when fullscreen, 50% otherwise (`desired_ai_panel_percent`).
 - Cleans up tracking when the tab drops to one pane or the tracked pane disappears.
