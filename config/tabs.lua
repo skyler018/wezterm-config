@@ -13,6 +13,7 @@ tabs_config.switch_to_last_active_tab_when_closing_tab = true
 
 local ICON_LEFT = nf.ple_left_half_circle_thick
 local ICON_RIGHT = nf.ple_right_half_circle_thick
+local ICON_CLAUDE = "✻"
 
 local COLORS = {
 	text_default = { bg = "#45475a", fg = "#1c1b19" },
@@ -76,7 +77,10 @@ local function process_icon(process_name)
 	if proc:find("yazi", 1, true) then
 		return ""
 	end
-	if proc:find("claude", 1, true) or proc:find("codex", 1, true) or proc:find("trae", 1, true) then
+	if proc:find("claude", 1, true) then
+		return ICON_CLAUDE
+	end
+	if proc:find("codex", 1, true) or proc:find("trae", 1, true) then
 		return ""
 	end
 
