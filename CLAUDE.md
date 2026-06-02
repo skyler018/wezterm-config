@@ -29,7 +29,7 @@ The config system lives in `config/init.lua` and works as follows:
 6. `cursor`
 7. `tabs`
 8. `keys` — also calls `resurrect.setup(keys_config)` to inject resurrect keybindings
-9. `theme` — loaded last so its `color_scheme` overrides any earlier value
+9. `theme` — loaded last so its `colors` override any earlier value
 
 ## Key Patterns
 
@@ -68,7 +68,7 @@ The `format-tab-title` handler in `tabs.lua` has a `no_title_procs` set (`claude
 
 ### Color schemes
 
-The `colors/` directory is present but empty. Color schemes are handled via WezTerm's built-in `color_scheme` setting in `theme.lua` (currently `Tokyo Night`).
+Colors are set directly in `theme.lua` via the `colors` config key, matching Ghostty's default StyleDark palette (background `#292c33`, foreground `#ffffff`).
 
 ## Keybinding Reference
 
@@ -91,3 +91,4 @@ The `colors/` directory is present but empty. Color schemes are handled via WezT
 | `CMD+SHIFT+D` | Split vertical |
 | `CMD+w` | Close pane (with confirm) |
 | `CMD+Enter` | Toggle pane zoom |
+| `CMD+SHIFT+f` | Toggle fullscreen |

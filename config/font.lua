@@ -38,7 +38,7 @@ font_config.font_rules = {
 }
 
 font_config.bold_brightens_ansi_colors = false
-font_config.font_size = 16.0
+font_config.font_size = 18.0
 font_config.line_height = 1.1
 font_config.cell_width = 1.0
 font_config.harfbuzz_features = { "calt=0", "clig=0", "liga=0" }

@@ -78,7 +78,7 @@
   - 活跃 tab 左侧显示粉色圆点指示器（`●`）
   - AI 工具（claude/codex/trae）的前台进程会抑制 app 标题，仅显示进程名
   - Tab 标题过长时自动截断并加省略号（`…`），过短时用空格补齐
-  - 颜色方案使用 Tokyo Night 色系：默认 (`#45475a`)、hover (`#7188b0`)、active (`#89b4fa`)
+  - 颜色方案使用 Ghostty 默认色系：默认 (`#3a3d44`)、hover (`#88a1bb`)、active (`#83a5d6`)
 
 ### `config/resurrect.lua`：状态持久化（WezTerm 插件）
 
@@ -89,7 +89,7 @@
 
 ### `config/theme.lua`：主题
 
-- 当前启用 `Tokyo Night`（见 `config/theme.lua:3`）
+- 当前启用 Ghostty 默认（StyleDark）主题（见 `config/theme.lua`）
 
 ### `config/keys.lua`：键位、鼠标与 AI Pane 管理
 
@@ -117,6 +117,7 @@
 - 分屏：`CMD+d`（水平）、`CMD+SHIFT+D`（垂直）（见 `config/keys.lua:866`）
 - 关闭 pane：`CMD+w`（确认提示开启）（见 `config/keys.lua:870`）
 - 放大/还原当前 pane：`CMD+Enter`（见 `config/keys.lua:873`）
+- 全屏：`CMD+SHIFT+f`（见 `config/keys.lua:876`）
 - `CMD+SHIFT+s`：保存窗口+工作区状态（resurrect，见 `config/resurrect.lua:8`）
 - `CMD+SHIFT+r`：模糊搜索恢复状态（resurrect，见 `config/resurrect.lua:19`）
 
@@ -172,3 +173,4 @@
 | `CMD+SHIFT+D` | 垂直分屏 |
 | `CMD+w` | 关闭 pane（确认提示） |
 | `CMD+Enter` | 放大/还原 pane |
+| `CMD+SHIFT+f` | 切换全屏 |

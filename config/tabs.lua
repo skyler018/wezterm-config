@@ -16,12 +16,12 @@ local ICON_RIGHT = nf.ple_right_half_circle_thick
 local ICON_CLAUDE = "✻"
 
 local COLORS = {
-	text_default = { bg = "#45475a", fg = "#1c1b19" },
-	text_hover = { bg = "#7188b0", fg = "#1c1b19" },
-	text_active = { bg = "#89b4fa", fg = "#11111b" },
-	scircle_default = { bg = "rgba(0, 0, 0, 0.4)", fg = "#45475a" },
-	scircle_hover = { bg = "rgba(0, 0, 0, 0.4)", fg = "#7188b0" },
-	scircle_active = { bg = "rgba(0, 0, 0, 0.4)", fg = "#89b4fa" },
+	text_default = { bg = "#3a3d44", fg = "#c5c8c6" },
+	text_hover = { bg = "#88a1bb", fg = "#1d1f21" },
+	text_active = { bg = "#83a5d6", fg = "#1d1f21" },
+	scircle_default = { bg = "rgba(0, 0, 0, 0.4)", fg = "#3a3d44" },
+	scircle_hover = { bg = "rgba(0, 0, 0, 0.4)", fg = "#88a1bb" },
+	scircle_active = { bg = "rgba(0, 0, 0, 0.4)", fg = "#83a5d6" },
 }
 
 local function clean_process_name(proc)
