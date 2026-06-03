@@ -135,151 +135,6 @@ end
 local RESIZE_PERCENT = 0.05
 local MAX_STEP_COLS = 30
 local MAX_STEP_ROWS = 15
-local tracked_ai_panes_by_tab = {}
-local pending_ai_adjust_generation_by_window = {}
-
-local function get_pane_id(pane)
-	if not pane then
-		return nil
-	end
-
-	local ok, pane_id = pcall(function()
-		return pane:pane_id()
-	end)
-	if ok and pane_id then
-		return pane_id
-	end
-
-	return pane.pane_id
-end
-
-local function get_tab_id(tab)
-	if not tab then
-		return nil
-	end
-
-	local ok, tab_id = pcall(function()
-		return tab:tab_id()
-	end)
-	if ok and tab_id then
-		return tab_id
-	end
-
-	return tab.tab_id
-end
-
-local function get_active_tab(window)
-	if not window then
-		return nil
-	end
-
-	local ok, tab = pcall(function()
-		return window:active_tab()
-	end)
-	if ok then
-		return tab
-	end
-
-	return nil
-end
-
-local function list_window_tabs(window)
-	if not window then
-		return {}
-	end
-
-	local ok, mux_window = pcall(function()
-		return window:mux_window()
-	end)
-	if not ok or not mux_window then
-		return {}
-	end
-
-	local ok_tabs, tabs = pcall(function()
-		return mux_window:tabs()
-	end)
-	if ok_tabs and type(tabs) == "table" then
-		return tabs
-	end
-
-	local ok_tabs_info, tabs_info = pcall(function()
-		return mux_window:tabs_with_info()
-	end)
-	if ok_tabs_info and type(tabs_info) == "table" then
-		local resolved_tabs = {}
-		for _, info in ipairs(tabs_info) do
-			if info and info.tab then
-				table.insert(resolved_tabs, info.tab)
-			end
-		end
-		return resolved_tabs
-	end
-
-	return {}
-end
-
-local function list_tab_panes(tab)
-	if not tab then
-		return {}
-	end
-
-	local ok, panes = pcall(function()
-		return tab:panes()
-	end)
-	if ok and type(panes) == "table" then
-		return panes
-	end
-
-	return {}
-end
-
-local function list_tab_panes_with_info(tab)
-	if not tab then
-		return {}
-	end
-
-	local ok, panes = pcall(function()
-		return tab:panes_with_info()
-	end)
-	if ok and type(panes) == "table" then
-		return panes
-	end
-
-	return {}
-end
-
-local function remember_new_ai_pane(window, before_ids, kind)
-	local tab = get_active_tab(window)
-	local tab_id = get_tab_id(tab)
-	if not tab_id then
-		return
-	end
-
-	for _, candidate in ipairs(list_tab_panes(tab)) do
-		local pane_id = get_pane_id(candidate)
-		if pane_id and not before_ids[pane_id] then
-			tracked_ai_panes_by_tab[tab_id] = {
-				kind = kind,
-				pane_id = pane_id,
-			}
-			return
-		end
-	end
-end
-
-local function snapshot_tab_pane_ids(window)
-	local ids = {}
-	local tab = get_active_tab(window)
-
-	for _, candidate in ipairs(list_tab_panes(tab)) do
-		local pane_id = get_pane_id(candidate)
-		if pane_id then
-			ids[pane_id] = true
-		end
-	end
-
-	return ids
-end
 
 local function tab_has_multiple_panes(window)
 	if not window then
@@ -355,173 +210,8 @@ local function resize_pane_by_percent(window, pane, dir)
 	window:perform_action(act.AdjustPaneSize({ dir, step }), pane)
 end
 
-local function prefer_one_third_for_traecli(window, pane)
-	-- 需求：仅当当前窗口“足够大”（如全屏）时才用 1/3；否则保持 1/2。
-	-- 这里严格以全屏标志判断，避免非全屏但窗口较大时也变成 1/3。
-	local ok, wdim = pcall(function()
-		return window and window.get_dimensions and window:get_dimensions() or nil
-	end)
-	if ok and type(wdim) == "table" then
-		return (wdim.is_full_screen == true) or (wdim.full_screen == true)
-	end
-	return false
-end
-
-local function desired_ai_panel_percent(window, pane)
-	return prefer_one_third_for_traecli(window, pane) and 33 or 50
-end
-
-local function get_window_id(window)
-	if not window then
-		return nil
-	end
-
-	local ok, window_id = pcall(function()
-		return window:window_id()
-	end)
-	if ok and window_id then
-		return window_id
-	end
-
-	return window.window_id
-end
-
-local function adjust_tracked_ai_panel_for_tab(window, tab)
-	local tab_id = get_tab_id(tab)
-	if not tab_id then
-		return
-	end
-
-	local tracked = tracked_ai_panes_by_tab[tab_id]
-	if not tracked or not tracked.pane_id then
-		return
-	end
-
-	local panes_info = list_tab_panes_with_info(tab)
-	if #panes_info <= 1 then
-		tracked_ai_panes_by_tab[tab_id] = nil
-		return
-	end
-
-	local tracked_info = nil
-	local min_left = nil
-	local max_right = nil
-
-	for _, info in ipairs(panes_info) do
-		local info_pane = info.pane
-		local pane_id = get_pane_id(info_pane)
-		local left = tonumber(info.left)
-		local width = tonumber(info.width)
-
-		if pane_id == tracked.pane_id then
-			tracked_info = info
-		end
-
-		if left and width and width > 0 then
-			local right = left + width
-			if not min_left or left < min_left then
-				min_left = left
-			end
-			if not max_right or right > max_right then
-				max_right = right
-			end
-		end
-	end
-
-	if not tracked_info or not tracked_info.pane then
-		tracked_ai_panes_by_tab[tab_id] = nil
-		return
-	end
-
-	local tracked_left = tonumber(tracked_info.left)
-	local tracked_width = tonumber(tracked_info.width)
-	if not tracked_left or not tracked_width or tracked_width <= 0 then
-		return
-	end
-
-	if not min_left or not max_right or max_right <= min_left then
-		return
-	end
-
-	local tracked_right = tracked_left + tracked_width
-	if tracked_right < (max_right - 1) then
-		return
-	end
-
-	local total_width = max_right - min_left
-	local target_width = math.floor((total_width * desired_ai_panel_percent(window, tracked_info.pane) / 100) + 0.5)
-	if target_width < 1 then
-		target_width = 1
-	end
-
-	local delta = target_width - tracked_width
-	if math.abs(delta) < 1 then
-		return
-	end
-
-	local dir = delta > 0 and "Left" or "Right"
-	window:perform_action(act.AdjustPaneSize({ dir, math.abs(delta) }), tracked_info.pane)
-end
-
-local function adjust_tracked_ai_panel_in_active_tab(window)
-	local active_tab = get_active_tab(window)
-	if active_tab then
-		adjust_tracked_ai_panel_for_tab(window, active_tab)
-		return
-	end
-
-	local tabs = list_window_tabs(window)
-	if #tabs > 0 then
-		adjust_tracked_ai_panel_for_tab(window, tabs[1])
-	end
-end
-
-local function safe_adjust_tracked_ai_panel(window)
-	if not window then
-		return
-	end
-
-	local ok, err = pcall(function()
-		adjust_tracked_ai_panel_in_active_tab(window)
-	end)
-	if not ok then
-		window:toast_notification("WezTerm", "自动调整 AI pane 大小失败：" .. tostring(err), nil, 5000)
-	end
-end
-
-local function schedule_tracked_ai_panel_adjust(window)
-	if not window then
-		return
-	end
-
-	safe_adjust_tracked_ai_panel(window)
-
-	local window_id = get_window_id(window)
-	if not window_id or not wezterm.time or not wezterm.time.call_after then
-		return
-	end
-
-	local generation = (pending_ai_adjust_generation_by_window[window_id] or 0) + 1
-	pending_ai_adjust_generation_by_window[window_id] = generation
-
-	-- macOS 原生全屏切换是异步动画；补几次延迟调整，等待 pane 几何稳定。
-	for _, delay in ipairs({ 0.12, 0.35, 0.75 }) do
-		wezterm.time.call_after(delay, function()
-			if pending_ai_adjust_generation_by_window[window_id] ~= generation then
-				return
-			end
-			safe_adjust_tracked_ai_panel(window)
-		end)
-	end
-end
-
-wezterm.on("window-resized", function(window, pane)
-	schedule_tracked_ai_panel_adjust(window)
-end)
 
 local function split_claude(window, pane)
-	local percent = desired_ai_panel_percent(window, pane)
-
 	if not window or not pane then
 		return
 	end
@@ -531,12 +221,11 @@ local function split_claude(window, pane)
 			window:toast_notification("WezTerm", toast_title, nil, 1200)
 		end
 
-		local before_ids = snapshot_tab_pane_ids(window)
 		local ok, err = pcall(function()
 			window:perform_action(
 				act.SplitPane({
 					direction = "Right",
-					size = { Percent = percent },
+					size = { Percent = 50 },
 					command = {
 						args = args,
 						set_environment_variables = {
@@ -551,8 +240,6 @@ local function split_claude(window, pane)
 			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
 			return
 		end
-
-		remember_new_ai_pane(window, before_ids, "claude")
 	end
 
 	local claude_ok, claude_path = deps.command_exists("claude")
@@ -566,8 +253,6 @@ local function split_claude(window, pane)
 end
 
 local function split_codex(window, pane)
-	local percent = desired_ai_panel_percent(window, pane)
-
 	if not window or not pane then
 		return
 	end
@@ -577,12 +262,11 @@ local function split_codex(window, pane)
 			window:toast_notification("WezTerm", toast_title, nil, 1200)
 		end
 
-		local before_ids = snapshot_tab_pane_ids(window)
 		local ok, err = pcall(function()
 			window:perform_action(
 				act.SplitPane({
 					direction = "Right",
-					size = { Percent = percent },
+					size = { Percent = 50 },
 					command = {
 						args = args,
 						set_environment_variables = {
@@ -597,8 +281,6 @@ local function split_codex(window, pane)
 			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
 			return
 		end
-
-		remember_new_ai_pane(window, before_ids, "codex")
 	end
 
 	local codex_ok, codex_path = deps.command_exists("codex")
@@ -612,8 +294,6 @@ local function split_codex(window, pane)
 end
 
 local function split_traecli(window, pane)
-	local percent = desired_ai_panel_percent(window, pane)
-
 	if not window or not pane then
 		return
 	end
@@ -623,14 +303,11 @@ local function split_traecli(window, pane)
 			window:toast_notification("WezTerm", toast_title, nil, 1200)
 		end
 
-		local before_ids = snapshot_tab_pane_ids(window)
-		-- 用 SplitPane 明确指定 size 与 command；不同 WezTerm 版本更稳定。
 		local ok, err = pcall(function()
 			window:perform_action(
 				act.SplitPane({
-					-- 与之前 SplitHorizontal 行为一致：在右侧打开（按宽度比例）
 					direction = "Right",
-					size = { Percent = percent },
+					size = { Percent = 50 },
 					command = {
 						args = args,
 						set_environment_variables = {
@@ -645,8 +322,6 @@ local function split_traecli(window, pane)
 			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
 			return
 		end
-
-		remember_new_ai_pane(window, before_ids, "traecli")
 	end
 
 	-- 像 yazi 一样先判断命令是否存在（按 PATH 查找）

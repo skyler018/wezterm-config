@@ -44,19 +44,6 @@ On `gui-startup`, deps checks for missing managed binaries and shows an `InputSe
 Several functions handle differences between WezTerm releases:
 - `get_pane_cwd(pane)` in `keys.lua` — resolves cwd from either Url object or string, with fallback manual `file://` parsing
 - `tab_has_multiple_panes(window)` in `keys.lua` — tries `tab:panes()` then `tab:panes_with_info()`
-- `get_pane_id(pane)` / `get_tab_id(tab)` in `keys.lua` — tries `:pane_id()` / `:tab_id()` methods before falling back to `.pane_id` / `.tab_id` fields
-- `prefer_one_third_for_traecli()` in `keys.lua` — checks fullscreen status via either `is_full_screen` or `full_screen` field
-
-### AI pane tracking and auto-resize (keys.lua)
-
-When an AI tool (claude, codex, traecli) is launched via a split keybinding, `remember_new_ai_pane()` records the new pane's ID in `tracked_ai_panes_by_tab` keyed by tab ID. This enables the `window-resized` event handler to resize the tracked AI pane in the current active tab whenever the window is resized.
-
-The resize logic:
-- Only adjusts the tracked AI pane in the current active tab of the resized window.
-- Only applies when the tracked pane is the rightmost pane in the tab.
-- Adjusts to 33% width when fullscreen, 50% otherwise (`desired_ai_panel_percent`).
-- Cleans up tracking when the tab drops to one pane or the tracked pane disappears.
-- Tolerates API diffs (field vs method access) the same way other compat helpers do.
 
 ### Cross-module mutation pattern (resurrect + keys)
 
