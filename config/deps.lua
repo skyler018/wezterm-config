@@ -41,6 +41,18 @@ function M.command_exists(bin)
     return cached[1], cached[2]
   end
 
+  local path_env = os.getenv('PATH') or ''
+  for dir in string.gmatch(path_env, '([^:]+)') do
+    local candidate = dir .. '/' .. bin
+    local ok, stdout, stderr = wezterm.run_child_process({ '/bin/sh', '-c', '[ -x "$1" ] && printf "%s" "$1"', 'sh', candidate })
+    local path = trim(stdout)
+    if ok and #path > 0 then
+      command_exists_cache[bin] = { true, path }
+      return true, path
+    end
+  end
+
+  -- PATH 内未找到时，再回退到 login shell，兼容 alias/path_helper 等环境注入。
   local shell = M.get_shell()
   local ok, stdout = wezterm.run_child_process({ shell, '-lc', 'command -v ' .. shell_quote(bin) })
   local path = trim(stdout)
@@ -174,20 +186,8 @@ function M.prompt_install(window, pane, missing)
   )
 end
 
--- 启动时最多提示一次（同一 GUI 进程内）
-local startup_prompted = false
-
 wezterm.on('gui-startup', function(cmd)
-  local _, pane, window = wezterm.mux.spawn_window(cmd or {})
-  if startup_prompted then
-    return
-  end
-  startup_prompted = true
-
-  local missing = M.get_missing_managed_deps()
-  if #missing > 0 then
-    M.prompt_install(window, pane, missing)
-  end
+  wezterm.mux.spawn_window(cmd or {})
 end)
 
 return M

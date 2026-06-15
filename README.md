@@ -70,7 +70,7 @@
 
 ### `config/tabs.lua`：Tab 栏
 
-- Tab bar 位于底部、关闭 fancy 样式、最大宽度 `25`、关闭 index 显示（见 `config/tabs.lua:6`）
+- Tab bar 位于顶部、关闭 fancy 样式、最大宽度 `25`、关闭 index 显示（见 `config/tabs.lua:6`）
 - 仅 1 个 tab 时隐藏 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:8`）
 - 自定义 `format-tab-title` 事件处理（见 `config/tabs.lua:115`）：
   - 根据前台进程显示对应 Nerd Font 图标（nvim/vim → ``、shell → ``、git/lazygit → ``、docker → ``、python → ``、node → ``、go → ``、lua → ``、rust → ``、yazi → ``、AI 工具 → `` 等）
@@ -85,14 +85,20 @@
 
 - 依赖 `MLFlexer/resurrect.wezterm` 插件
 - 提供 `setup(keys_config)` 函数，由 `keys.lua` 调用注入快捷键（见 `config/resurrect.lua:6`）
-- `CMD+SHIFT+s`：快速保存当前 Window + Workspace 状态（Tab/Pane 布局及运行中的命令）
-- `CMD+SHIFT+r`：通过 fuzzy finder 模糊搜索并恢复已保存的 window/workspace/tab 状态
+- 默认关闭，避免与 `tmux-resurrect + tmux-continuum` 的恢复链路重复
+- 若要恢复旧行为，可将 `config/resurrect.lua` 中的 `ENABLE_WEZTERM_RESURRECT` 改为 `true`
+- 开启后：
+  - `CMD+SHIFT+s`：快速保存当前 Window + Workspace 状态（Tab/Pane 布局及运行中的命令）
+  - `CMD+SHIFT+r`：通过 fuzzy finder 模糊搜索并恢复已保存的 window/workspace/tab 状态
 
 ### `config/theme.lua`：主题
 
 - 当前启用 Ghostty 默认（StyleDark）主题（见 `config/theme.lua`）
 
 ### `config/keys.lua`：键位与鼠标
+
+- `USE_WEZTERM_PANES=false`：默认把 pane 级工作流交还给 tmux；改为 `true` 可恢复原先的 WezTerm pane 行为
+- `AGENT_LAUNCH_MODE` 默认随 `USE_WEZTERM_PANES` 切换：关闭 pane 工作流时新开 tab，开启时恢复右侧 split
 
 鼠标：
 
@@ -104,23 +110,21 @@
 - `CMD+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录（见 `config/keys.lua:682`）
 - `CMD+SHIFT+g/G`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录（见 `config/keys.lua:717`）
 - `CMD+SHIFT+i`：手动弹出依赖安装提示（见 `config/keys.lua:728`）
-- `CMD+SHIFT+c/C`：右侧分屏启动 `claude`；若未检测到则引导安装（见 `config/keys.lua:785`）
-- `CMD+SHIFT+x/X`：右侧分屏启动 `codex`；若未检测到则引导安装（见 `config/keys.lua:746`）
-- `CMD+SHIFT+t/T`：右侧分屏启动 `traex`（按 `PATH` 查找）；若未检测到则 fallback 到 `claude`；二者都不存在会引导安装 `claude`
+- `CMD+SHIFT+c/C`：默认在新标签页打开 `claude`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `claude`
+- `CMD+SHIFT+x/X`：默认在新标签页打开 `codex`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `codex`
+- `CMD+SHIFT+t/T`：默认在新标签页打开 `traex`（fallback: `claude`）；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split agent pane
 - `CMD+SHIFT+o/O`：在浏览器中打开当前选中文本中的 http/https 链接（见 `config/keys.lua:735`）
+- `CMD+SHIFT+[` / `CMD+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
+- `CMD+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
 - `F1`：进入复制模式（见 `config/keys.lua:800`）
-- Pane 焦点移动：`CMD+h/j/k/l`（见 `config/keys.lua:768`）
-- Pane 缩放（按比例调整，仅同一 tab 存在多个 pane 时生效）：
-  - 左/右：`CMD+SHIFT+h/l`（以及 `H/L`）
-  - 上/下：`CMD+SHIFT+k/j`（以及 `K/J`）
-  - 步进为当前 pane 尺寸的 `5%`，左右最大 `30` 列、上下最大 `15` 行（见 `config/keys.lua:129`）
+- `CMD+h/j/k/l`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
+- `CMD+SHIFT+h/j/k/l`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
 - 新窗口：`CMD+n`（见 `config/keys.lua:863`）
-- 分屏：`CMD+d`（水平）、`CMD+SHIFT+D`（垂直）（见 `config/keys.lua:866`）
+- `CMD+d` / `CMD+SHIFT+D`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm 分屏
 - 关闭 pane：`CMD+w`（确认提示开启）（见 `config/keys.lua:870`）
-- 放大/还原当前 pane：`CMD+Enter`（见 `config/keys.lua:873`）
+- `CMD+Enter`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 放大/还原
 - 全屏：`CMD+SHIFT+f`（见 `config/keys.lua:876`）
-- `CMD+SHIFT+s`：保存窗口+工作区状态（resurrect，见 `config/resurrect.lua:8`）
-- `CMD+SHIFT+r`：模糊搜索恢复状态（resurrect，见 `config/resurrect.lua:19`）
+- `CMD+SHIFT+s/r`：默认未注册；当 `ENABLE_WEZTERM_RESURRECT=true` 时恢复为 WezTerm 状态保存/恢复
 
 此外，`keys.lua` 内部实现了：
 
@@ -130,7 +134,7 @@
 
 ### 跨模块交互
 
-- `keys.lua` 构建 `keys_config` 后调用 `resurrect.setup(keys_config)`，由 `resurrect.lua` 向 `keys_config.keys` 注入 `CMD+SHIFT+s` 和 `CMD+SHIFT+r` 快捷键。这是唯一一处模块间 mutation。
+- `keys.lua` 构建 `keys_config` 后调用 `resurrect.setup(keys_config)`；只有当 `ENABLE_WEZTERM_RESURRECT=true` 时，`resurrect.lua` 才会向 `keys_config.keys` 注入 `CMD+SHIFT+s` 和 `CMD+SHIFT+r` 快捷键。
 - `deps.lua` 作为服务模块被 `keys.lua` 直接 `require`，提供命令检测与安装引导功能。
 
 ## 依赖与建议
@@ -153,19 +157,22 @@
 |------|------|
 | `CMD+SHIFT+y` | 新标签页打开 yazi |
 | `CMD+SHIFT+g/G` | 新标签页打开 lazygit |
-| `CMD+SHIFT+c/C` | 右侧分屏：claude |
-| `CMD+SHIFT+x/X` | 右侧分屏：codex |
-| `CMD+SHIFT+t/T` | 右侧分屏：traex（fallback: claude） |
+| `CMD+SHIFT+c/C` | 新标签页打开 claude |
+| `CMD+SHIFT+x/X` | 新标签页打开 codex |
+| `CMD+SHIFT+t/T` | 新标签页打开 traex（fallback: claude） |
 | `CMD+SHIFT+o/O` | 在浏览器中打开选中链接 |
+| `CMD+SHIFT+[` | 切到上一个 tmux window |
+| `CMD+SHIFT+]` | 切到下一个 tmux window |
 | `CMD+SHIFT+i` | 手动触发依赖检测/安装 |
-| `CMD+SHIFT+s` | 保存窗口+工作区状态 |
-| `CMD+SHIFT+r` | 模糊搜索恢复状态 |
+| `CMD+SHIFT+s` | 默认未启用（可恢复 WezTerm 状态保存） |
+| `CMD+SHIFT+r` | 默认未启用（可恢复 WezTerm 状态恢复） |
 | `F1` | 进入复制模式 |
-| `CMD+h/j/k/l` | 切换 pane 焦点（左/下/上/右） |
-| `CMD+SHIFT+h/j/k/l` | 调整 pane 大小（H/J/K/L 同样有效） |
+| `CMD+1..9` | 直接切到 tmux window 1..9 |
+| `CMD+h/j/k/l` | 默认提示改用 tmux 管理 pane |
+| `CMD+SHIFT+h/j/k/l` | 默认提示改用 tmux 管理 pane |
 | `CMD+n` | 新建窗口 |
-| `CMD+d` | 水平分屏 |
-| `CMD+SHIFT+D` | 垂直分屏 |
+| `CMD+d` | 默认提示改用 tmux 分屏 |
+| `CMD+SHIFT+D` | 默认提示改用 tmux 分屏 |
 | `CMD+w` | 关闭 pane（确认提示） |
-| `CMD+Enter` | 放大/还原 pane |
+| `CMD+Enter` | 默认提示改用 tmux pane 缩放 |
 | `CMD+SHIFT+f` | 切换全屏 |

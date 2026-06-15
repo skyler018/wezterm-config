@@ -65,9 +65,9 @@ Colors are set directly in `theme.lua` via the `colors` config key, matching Gho
 |------|--------|
 | `CMD+SHIFT+y` | Open yazi in new tab (current pane cwd) |
 | `CMD+SHIFT+g/G` | Open lazygit in new tab (current pane cwd) |
-| `CMD+SHIFT+c/C` | Split right: claude |
-| `CMD+SHIFT+x/X` | Split right: codex |
-| `CMD+SHIFT+t/T` | Split right: traecli (fallback: claude) |
+| `CMD+SHIFT+c/C` | Focus existing claude pane, else split right: claude |
+| `CMD+SHIFT+x/X` | Focus existing codex pane, else split right: codex |
+| `CMD+SHIFT+t/T` | Focus existing trae pane, else split right: traecli (fallback: claude) |
 | `CMD+SHIFT+o/O` | Open selected HTTP URL in browser |
 | `CMD+SHIFT+i` | Manually trigger dependency check/install prompt |
 | `CMD+SHIFT+s` | Save window+workspace state (resurrect) |

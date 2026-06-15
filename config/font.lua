@@ -1,7 +1,9 @@
 local wezterm = require("wezterm")
 
 local font_config = {}
-local base_font_family = "JetBrainsMono Nerd Font"
+-- 当前机器上可稳定命中的 family 是 WezTerm 内置的 JetBrains Mono；
+-- Nerd 图标单独交给 Symbols Nerd Font Mono 兜底，避免 family 名不匹配时整体回退。
+local base_font_family = "JetBrains Mono"
 
 -- 字体
 font_config.font = wezterm.font_with_fallback({

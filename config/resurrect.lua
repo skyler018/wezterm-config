@@ -2,8 +2,13 @@ local wezterm = require 'wezterm'
 local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
 
 local M = {}
+local ENABLE_WEZTERM_RESURRECT = false
 
 function M.setup(keys_config)
+  if not ENABLE_WEZTERM_RESURRECT then
+    return
+  end
+
   -- 快速保存状态 (Window + Workspace)
   table.insert(keys_config.keys, {
     key = "s",

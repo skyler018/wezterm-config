@@ -5,7 +5,8 @@ local tabs_config = {}
 local nf = wezterm.nerdfonts
 
 tabs_config.enable_tab_bar = true
-tabs_config.tab_bar_at_bottom = true
+-- Keep the GUI-level tab strip separate from tmux's status line.
+tabs_config.tab_bar_at_bottom = false
 tabs_config.hide_tab_bar_if_only_one_tab = true
 tabs_config.use_fancy_tab_bar = false
 tabs_config.tab_max_width = 25
@@ -32,6 +33,45 @@ end
 
 local function trim(text)
 	return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function take_cells(text, max_cells)
+	if not text or text == "" or not max_cells or max_cells <= 0 then
+		return ""
+	end
+
+	local cell_count = 0
+	local out = {}
+	for _, codepoint in utf8.codes(text) do
+		local ch = utf8.char(codepoint)
+		local width = wezterm.column_width(ch)
+		if (cell_count + width) > max_cells then
+			break
+		end
+		cell_count = cell_count + width
+		table.insert(out, ch)
+	end
+	return table.concat(out)
+end
+
+local function pad_cells(text, target_cells)
+	local current = wezterm.column_width(text)
+	if current >= target_cells then
+		return text
+	end
+	return text .. string.rep(" ", target_cells - current)
+end
+
+local function fit_title(text, max_cells)
+	local inner_max = math.max(6, max_cells or 25)
+	local ellipsis = "…"
+	local ellipsis_width = wezterm.column_width(ellipsis)
+
+	if wezterm.column_width(text) > inner_max then
+		text = take_cells(text, inner_max - ellipsis_width) .. ellipsis
+	end
+
+	return pad_cells(text, inner_max)
 end
 
 local function sanitize_title(text)
@@ -209,31 +249,13 @@ local function create_title(tab, max_width)
 
 	title = tab_index .. " " .. icon .. " " .. title
 
-	local inner_max = math.max(6, (max_width or 25) - 4)
-	if #title > inner_max then
-		title = title:sub(1, inner_max - 1) .. "…"
-	end
-
-	if #title < inner_max then
-		title = title .. string.rep(" ", inner_max - #title)
-	end
-
-	return title
+	return fit_title(title, (max_width or 25) - 4)
 end
 
 local function fallback_title(tab, max_width)
 	local tab_index = tostring((tab and tab.tab_index or 0) + 1)
-	local inner_max = math.max(6, (max_width or 25) - 4)
 	local title = tab_index .. "  shell"
-
-	if #title > inner_max then
-		title = title:sub(1, inner_max - 1) .. "…"
-	end
-	if #title < inner_max then
-		title = title .. string.rep(" ", inner_max - #title)
-	end
-
-	return title
+	return fit_title(title, (max_width or 25) - 4)
 end
 
 local function build_tab_cells(tab, hover, max_width)
