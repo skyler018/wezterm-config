@@ -3,6 +3,45 @@ local act = wezterm.action
 local deps = require("config/deps")
 
 local keys_config = {}
+-- WezTerm 只保留 GUI 容器职责；需要恢复旧的 pane 工作流时改回 true。
+local USE_WEZTERM_PANES = false
+local AGENT_LAUNCH_MODE = USE_WEZTERM_PANES and "split" or "tab"
+
+local function tmux_prefixed_send(keys, hint_label)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		window:perform_action(act.SendString("\x02" .. keys), pane)
+		if hint_label and #hint_label > 0 then
+			window:toast_notification("WezTerm", hint_label, nil, 800)
+		end
+	end)
+end
+
+local function pane_workflow_hint(action_label)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		window:toast_notification(
+			"WezTerm",
+			tostring(action_label) .. " 已交给 tmux 管理。想恢复旧行为时，把 config/keys.lua 中 USE_WEZTERM_PANES 改为 true。",
+			nil,
+			4200
+		)
+	end)
+end
+
+local function tmux_workflow_action(keys, hint_label, callback)
+	if USE_WEZTERM_PANES then
+		return wezterm.action_callback(callback)
+	end
+
+	return tmux_prefixed_send(keys, hint_label)
+end
 
 local function get_login_shell_args(...)
 	local args = { deps.get_shell(), "-ic", 'exec "$0" "$@"' }
@@ -11,6 +50,30 @@ local function get_login_shell_args(...)
 		table.insert(args, v)
 	end
 	return args
+end
+
+local function open_in_new_tab(window, pane, options)
+	if not window or not pane or not options or type(options.args) ~= "table" then
+		return false, "missing window/pane/options"
+	end
+
+	if options.toast_title and #options.toast_title > 0 then
+		window:toast_notification("WezTerm", options.toast_title, nil, 1200)
+	end
+
+	local cwd = get_pane_cwd(pane)
+	window:perform_action(
+		act.SpawnCommandInNewTab({
+			domain = "CurrentPaneDomain",
+			cwd = cwd,
+			args = options.args,
+			set_environment_variables = {
+				PATH = os.getenv("PATH"),
+			},
+		}),
+		pane
+	)
+	return true, nil
 end
 
 local function split_right_command(window, pane, options)
@@ -147,6 +210,159 @@ local function extract_http_url(text)
 	return text:match("https?://[%w%-%._~:/%?#%[%]@!$&'%(%)*%+,;=]+")
 end
 
+local function normalize_process_name(proc)
+	if not proc then
+		return ""
+	end
+
+	local name = tostring(proc):gsub("\\", "/"):match("([^/]+)$") or tostring(proc)
+	return name:lower()
+end
+
+local function process_matches_any_target(process_name, targets)
+	if process_name == "" then
+		return false
+	end
+
+	for _, target in ipairs(targets or {}) do
+		local normalized_target = tostring(target):lower()
+		if normalized_target ~= "" and process_name:find(normalized_target, 1, true) then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function normalize_title_text(text)
+	if not text then
+		return ""
+	end
+
+	local normalized = tostring(text):lower()
+	normalized = normalized:gsub("\27%][^\7]*\7", "")
+	normalized = normalized:gsub("\27%[[%d;?]*[%a]", "")
+	normalized = normalized:gsub("[%c]", " ")
+	normalized = normalized:gsub("%s+", " ")
+	return normalized:gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function extract_process_name_from_pane(pane_obj)
+	if not pane_obj then
+		return ""
+	end
+
+	local candidates = {
+		pane_obj.foreground_process_name,
+	}
+
+	for _, candidate in ipairs(candidates) do
+		local normalized = normalize_process_name(candidate)
+		if normalized ~= "" then
+			return normalized
+		end
+	end
+
+	if pane_obj.get_foreground_process_name then
+		local ok, value = pcall(function()
+			return pane_obj:get_foreground_process_name()
+		end)
+		if ok then
+			local normalized = normalize_process_name(value)
+			if normalized ~= "" then
+				return normalized
+			end
+		end
+	end
+
+	local title_candidates = {
+		pane_obj.title,
+	}
+	if pane_obj.get_title then
+		local ok, value = pcall(function()
+			return pane_obj:get_title()
+		end)
+		if ok then
+			table.insert(title_candidates, value)
+		end
+	end
+
+	for _, title in ipairs(title_candidates) do
+		local normalized_title = normalize_title_text(title)
+		if normalized_title ~= "" then
+			return normalized_title
+		end
+	end
+
+	return ""
+end
+
+local function get_active_tab(window)
+	if not window then
+		return nil
+	end
+
+	local tab = window:active_tab()
+	if not tab then
+		return nil
+	end
+
+	return tab
+end
+
+local function activate_existing_agent_pane(window, pane, targets, toast_title)
+	if not USE_WEZTERM_PANES then
+		return false
+	end
+
+	local tab = get_active_tab(window)
+	if not tab then
+		return false
+	end
+
+	local ok, panes = pcall(function()
+		if tab.panes then
+			return tab:panes()
+		end
+		return nil
+	end)
+	if not ok or type(panes) ~= "table" or #panes == 0 then
+		return false
+	end
+
+	local current_pane_id = pane and pane:pane_id() or nil
+	for pane_index, candidate_pane in ipairs(panes) do
+		local process_name = extract_process_name_from_pane(candidate_pane)
+		local pane_id = candidate_pane and candidate_pane.pane_id and candidate_pane:pane_id() or nil
+		if process_matches_any_target(process_name, targets) and pane_id ~= current_pane_id then
+			local activated = false
+
+			if candidate_pane and candidate_pane.activate then
+				local ok = pcall(function()
+					candidate_pane:activate()
+				end)
+				activated = ok
+			end
+
+			if not activated then
+				local ok = pcall(function()
+					window:perform_action(act.ActivatePaneByIndex(pane_index - 1), pane)
+				end)
+				activated = ok
+			end
+
+			if activated then
+				if toast_title and #toast_title > 0 then
+					window:toast_notification("WezTerm", toast_title, nil, 1200)
+				end
+				return true
+			end
+		end
+	end
+
+	return false
+end
+
 local function open_lazygit(window, pane)
 	local ok, lazygit_path = deps.command_exists("lazygit")
 	if not ok then
@@ -275,14 +491,107 @@ local function resize_pane_by_percent(window, pane, dir)
 	window:perform_action(act.AdjustPaneSize({ dir, step }), pane)
 end
 
+local function pane_direction_action(direction)
+	if USE_WEZTERM_PANES then
+		return act.ActivatePaneDirection(direction)
+	end
+
+	local tmux_direction_key = {
+		Left = "h",
+		Down = "J",
+		Up = "k",
+		Right = "l",
+	}
+
+	return tmux_prefixed_send(
+		tmux_direction_key[direction] or "",
+		"tmux: 切换到" .. tostring(direction) .. "侧 pane"
+	)
+end
+
+local function pane_resize_action(direction)
+	if USE_WEZTERM_PANES then
+		return wezterm.action_callback(function(window, pane)
+			resize_pane_by_percent(window, pane, direction)
+		end)
+	end
+
+	local tmux_resize_key = {
+		Left = "H",
+		Down = "J",
+		Up = "K",
+		Right = "L",
+	}
+
+	return tmux_prefixed_send(
+		tmux_resize_key[direction] or "",
+		"tmux: 调整" .. tostring(direction) .. "侧 pane 大小"
+	)
+end
+
+local function pane_split_action(direction)
+	if USE_WEZTERM_PANES then
+		if direction == "horizontal" then
+			return act.SplitHorizontal
+		end
+		return act.SplitVertical
+	end
+
+	local tmux_split_key = {
+		horizontal = "s",
+		vertical = "v",
+	}
+
+	local split_hint = {
+		horizontal = "tmux: 上下分屏",
+		vertical = "tmux: 左右分屏",
+	}
+
+	return tmux_prefixed_send(
+		tmux_split_key[direction] or "",
+		split_hint[direction] or "tmux: 分屏"
+	)
+end
+
+local function pane_zoom_action()
+	if USE_WEZTERM_PANES then
+		return "TogglePaneZoomState"
+	end
+
+	return tmux_prefixed_send("z", "tmux: 放大或还原当前 pane")
+end
+
+local function pane_close_action()
+	if USE_WEZTERM_PANES then
+		return wezterm.action.CloseCurrentPane({ confirm = true })
+	end
+
+	return tmux_prefixed_send("x", "tmux: 关闭当前 pane（需确认）")
+end
 
 local function split_claude(window, pane)
 	if not window or not pane then
 		return
 	end
 
+	if activate_existing_agent_pane(window, pane, { "claude" }, "已切换到 claude pane") then
+		return
+	end
+
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
+		if AGENT_LAUNCH_MODE == "tab" then
+			open_in_new_tab(
+				window,
+				pane,
+				{
+					args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
+					toast_title = "正在新标签页打开 claude…",
+				}
+			)
+			return
+		end
+
 		split_right_prefer_exec(
 			window,
 			pane,
@@ -302,8 +611,24 @@ local function split_codex(window, pane)
 		return
 	end
 
+	if activate_existing_agent_pane(window, pane, { "codex" }, "已切换到 codex pane") then
+		return
+	end
+
 	local codex_ok, codex_path = deps.command_exists("codex")
 	if codex_ok then
+		if AGENT_LAUNCH_MODE == "tab" then
+			open_in_new_tab(
+				window,
+				pane,
+				{
+					args = get_login_shell_args(codex_path or "codex"),
+					toast_title = "正在新标签页打开 codex…",
+				}
+			)
+			return
+		end
+
 		split_right_prefer_exec(
 			window,
 			pane,
@@ -324,7 +649,27 @@ local function split_traex(window, pane)
 	end
 
 	local trae_ok, trae_path = deps.command_exists("traex")
+	if trae_ok and activate_existing_agent_pane(window, pane, { "trae", "traex" }, "已切换到 traex pane") then
+		return
+	end
+
+	if (not trae_ok) and activate_existing_agent_pane(window, pane, { "trae", "traex", "claude" }, "已切换到 agent pane") then
+		return
+	end
+
 	if trae_ok then
+		if AGENT_LAUNCH_MODE == "tab" then
+			open_in_new_tab(
+				window,
+				pane,
+				{
+					args = get_login_shell_args(trae_path or "traex"),
+					toast_title = "正在新标签页打开 traex…",
+				}
+			)
+			return
+		end
+
 		split_right_prefer_exec(
 			window,
 			pane,
@@ -337,6 +682,18 @@ local function split_traex(window, pane)
 
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
+		if AGENT_LAUNCH_MODE == "tab" then
+			open_in_new_tab(
+				window,
+				pane,
+				{
+					args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
+					toast_title = "未检测到 traex，正在新标签页打开 claude…",
+				}
+			)
+			return
+		end
+
 		split_right_prefer_exec(
 			window,
 			pane,
@@ -373,52 +730,23 @@ keys_config.keys = {
 	{
 		key = "y",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			local ok, yazi_path = deps.command_exists("yazi")
-			if not ok then
-				deps.prompt_install(window, pane, deps.get_missing_dep("yazi"))
-				return
-			end
-
-			local cwd = get_pane_cwd(pane)
-			if not cwd then
-				window:toast_notification(
-					"WezTerm",
-					"未能获取当前 pane 的工作目录（将回退到 $HOME）",
-					nil,
-					6000
-				)
-			end
-
-			local args = get_login_shell_args(yazi_path or "yazi")
-			-- yazi 支持传入初始目录：yazi <dir>
-			if cwd and #cwd > 0 then
-				table.insert(args, cwd)
-			end
-			window:perform_action(
-				act.SpawnCommandInNewTab({
-					domain = "CurrentPaneDomain",
-					cwd = cwd,
-					-- 通过 zsh 调用以加载环境变量，解决 yazi 插件找不到命令的问题
-					args = args,
-					set_environment_variables = {
-						PATH = os.getenv("PATH"),
-					},
-				}),
-				pane
-			)
-		end),
+		action = tmux_prefixed_send("y", "tmux: 新建 window 打开 yazi"),
+	},
+	{
+		key = "Y",
+		mods = "CMD|SHIFT",
+		action = tmux_prefixed_send("y", "tmux: 新建 window 打开 yazi"),
 	},
 	{
 		key = "g",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(open_lazygit),
+		action = tmux_workflow_action("g", "tmux: 打开 lazygit popup", open_lazygit),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为大写
 	{
 		key = "G",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(open_lazygit),
+		action = tmux_workflow_action("g", "tmux: 打开 lazygit popup", open_lazygit),
 	},
 	{
 		key = "i",
@@ -440,56 +768,71 @@ keys_config.keys = {
 	{
 		key = "X",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_codex),
+		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "x",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_codex),
+		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
 	},
 	{
 		key = "T",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_traex),
+		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "t",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_traex),
+		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
+	},
+	{
+		key = "t",
+		mods = "CMD",
+		action = tmux_prefixed_send("c", "tmux: 新建 window"),
 	},
 	{
 		key = "h",
 		mods = "CMD",
-		action = wezterm.action.ActivatePaneDirection("Left"),
+		action = pane_direction_action("Left"),
 	},
 	{
 		key = "l",
 		mods = "CMD",
-		action = wezterm.action.ActivatePaneDirection("Right"),
+		action = pane_direction_action("Right"),
 	},
 
 	{
 		key = "k",
 		mods = "CMD",
-		action = wezterm.action.ActivatePaneDirection("Up"),
+		action = pane_direction_action("Up"),
 	},
 	{
 		key = "C",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_claude),
+		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
 	},
 	{
 		key = "c",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_claude),
+		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
 	},
 
 	{
 		key = "j",
 		mods = "CMD",
-		action = wezterm.action.ActivatePaneDirection("Down"),
+		action = pane_direction_action("Down"),
+	},
+	{
+		key = "[",
+		mods = "CMD|SHIFT",
+		action = tmux_prefixed_send("\x08", "tmux: 上一个 window"),
+	},
+	{
+		key = "]",
+		mods = "CMD|SHIFT",
+		action = tmux_prefixed_send("\x0c", "tmux: 下一个 window"),
 	},
 	{
 		key = "F1",
@@ -501,71 +844,64 @@ keys_config.keys = {
 	{
 		key = "h",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Left")
-		end),
+		action = pane_resize_action("Left"),
 	},
 	{
 		key = "H",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Left")
-		end),
+		action = pane_resize_action("Left"),
 	},
 	{
 		key = "l",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Right")
-		end),
+		action = pane_resize_action("Right"),
 	},
 	{
 		key = "L",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Right")
-		end),
+		action = pane_resize_action("Right"),
 	},
 	{
 		key = "k",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Up")
-		end),
+		action = pane_resize_action("Up"),
 	},
 	{
 		key = "K",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Up")
-		end),
+		action = pane_resize_action("Up"),
 	},
 	{
 		key = "j",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Down")
-		end),
+		action = pane_resize_action("Down"),
 	},
 	{
 		key = "J",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(function(window, pane)
-			resize_pane_by_percent(window, pane, "Down")
-		end),
+		action = pane_resize_action("Down"),
 	},
 	-- 新窗口
 	{ key = "n", mods = "CMD", action = wezterm.action.SpawnWindow },
+	{ key = "1", mods = "CMD", action = tmux_prefixed_send("1", "tmux: window 1") },
+	{ key = "2", mods = "CMD", action = tmux_prefixed_send("2", "tmux: window 2") },
+	{ key = "3", mods = "CMD", action = tmux_prefixed_send("3", "tmux: window 3") },
+	{ key = "4", mods = "CMD", action = tmux_prefixed_send("4", "tmux: window 4") },
+	{ key = "5", mods = "CMD", action = tmux_prefixed_send("5", "tmux: window 5") },
+	{ key = "6", mods = "CMD", action = tmux_prefixed_send("6", "tmux: window 6") },
+	{ key = "7", mods = "CMD", action = tmux_prefixed_send("7", "tmux: window 7") },
+	{ key = "8", mods = "CMD", action = tmux_prefixed_send("8", "tmux: window 8") },
+	{ key = "9", mods = "CMD", action = tmux_prefixed_send("9", "tmux: window 9") },
 
 	-- 分屏
-	{ key = "d", mods = "CMD", action = wezterm.action.SplitHorizontal },
-	{ key = "D", mods = "CMD|SHIFT", action = wezterm.action.SplitVertical },
+	{ key = "d", mods = "CMD", action = pane_split_action("horizontal") },
+	{ key = "D", mods = "CMD|SHIFT", action = pane_split_action("vertical") },
 
 	-- 关闭 pane
-	{ key = "w", mods = "CMD", action = wezterm.action.CloseCurrentPane({ confirm = true }) },
+	{ key = "w", mods = "CMD", action = pane_close_action() },
 
 	-- 放大 pane
-	{ key = "Enter", mods = "CMD", action = "TogglePaneZoomState" },
+	{ key = "Enter", mods = "CMD", action = pane_zoom_action() },
 
 	-- 全屏
 	{ key = "f", mods = "CMD|SHIFT", action = "ToggleFullScreen" },
