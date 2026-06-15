@@ -75,6 +75,7 @@
 - 仅 1 个 tab 时隐藏 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:8`）
 - 自定义 `format-tab-title` 事件处理（见 `config/tabs.lua:115`）：
   - 根据前台进程显示对应 Nerd Font 图标（nvim/vim → ``、shell → ``、git/lazygit → ``、docker → ``、python → ``、node → ``、go → ``、lua → ``、rust → ``、yazi → ``、AI 工具 → `` 等）
+  - Tab 标题文本优先显示当前活跃 pane 的目录名；拿不到 cwd 时回退到进程名或 pane 标题
   - 活跃 tab 左侧显示粉色圆点指示器（`●`）
   - AI 工具（claude/codex/trae）的前台进程会抑制 app 标题，仅显示进程名
   - Tab 标题过长时自动截断并加省略号（`…`），过短时用空格补齐

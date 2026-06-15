@@ -1,4 +1,5 @@
 local wezterm = require("wezterm")
+local deps = require("config/deps")
 
 local tabs_config = {}
 local nf = wezterm.nerdfonts
@@ -31,6 +32,59 @@ end
 
 local function trim(text)
 	return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+local function get_pane_cwd(pane)
+	if not pane then
+		return nil
+	end
+
+	local cwd_uri = pane.current_working_dir
+	if cwd_uri == nil and type(pane.get_current_working_dir) == "function" then
+		cwd_uri = pane:get_current_working_dir()
+	end
+	if not cwd_uri then
+		return nil
+	end
+
+	if type(cwd_uri) == "table" and cwd_uri.file_path then
+		return cwd_uri.file_path
+	end
+
+	local cwd_str = tostring(cwd_uri)
+	local ok, path = pcall(function()
+		if wezterm.uri_to_file_path then
+			return wezterm.uri_to_file_path(cwd_str)
+		end
+		if wezterm.uri_to_path then
+			return wezterm.uri_to_path(cwd_str)
+		end
+		return nil
+	end)
+	if ok and path and #path > 0 then
+		return path
+	end
+
+	if cwd_str:match("^file://") then
+		local path_from_uri = cwd_str:gsub("^file://", "")
+		path_from_uri = path_from_uri:gsub("^/*", "/")
+		return deps.percent_decode(path_from_uri)
+	end
+
+	return nil
+end
+
+local function basename(path)
+	if not path or path == "" then
+		return nil
+	end
+	if path == "/" then
+		return "/"
+	end
+
+	local normalized = path:gsub("[/\\]+$", "")
+	local name = normalized:match("([^/\\]+)$")
+	return name or normalized
 end
 
 local function process_icon(process_name)
@@ -91,15 +145,22 @@ local function create_title(tab, max_width)
 	local tab_index = tostring((tab.tab_index or 0) + 1)
 	local process_name = clean_process_name(tab.active_pane.foreground_process_name)
 	local icon = process_icon(process_name)
+	local cwd_name = basename(get_pane_cwd(tab.active_pane))
 	local base_title = trim(tab.active_pane.title)
 
 	local no_title_procs = { claude = true, codex = true, traex = true }
-	if no_title_procs[process_name:lower()] or base_title == "" or base_title == "wezterm" then
+	if base_title == "" or base_title == "wezterm" then
+		base_title = process_name
+	end
+
+	if cwd_name and cwd_name ~= "" then
+		base_title = cwd_name
+	elseif no_title_procs[process_name:lower()] then
 		base_title = process_name
 	end
 
 	local title = base_title
-	if process_name ~= "" and base_title ~= "" and process_name ~= base_title then
+	if not (cwd_name and cwd_name ~= "") and process_name ~= "" and base_title ~= "" and process_name ~= base_title then
 		title = process_name .. " ~ " .. base_title
 	end
 
