@@ -80,7 +80,7 @@ local function process_icon(process_name)
 	if proc:find("claude", 1, true) then
 		return ICON_CLAUDE
 	end
-	if proc:find("codex", 1, true) or proc:find("trae", 1, true) then
+	if proc:find("codex", 1, true) or proc:find("traex", 1, true) then
 		return ""
 	end
 
@@ -93,7 +93,7 @@ local function create_title(tab, max_width)
 	local icon = process_icon(process_name)
 	local base_title = trim(tab.active_pane.title)
 
-	local no_title_procs = { claude = true, codex = true, trae = true }
+	local no_title_procs = { claude = true, codex = true, traex = true }
 	if no_title_procs[process_name:lower()] or base_title == "" or base_title == "wezterm" then
 		base_title = process_name
 	end

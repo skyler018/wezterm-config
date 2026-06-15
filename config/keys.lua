@@ -293,7 +293,7 @@ local function split_codex(window, pane)
 	deps.prompt_install(window, pane, deps.get_missing_dep("codex"))
 end
 
-local function split_traecli(window, pane)
+local function split_traex(window, pane)
 	if not window or not pane then
 		return
 	end
@@ -324,21 +324,19 @@ local function split_traecli(window, pane)
 		end
 	end
 
-	-- 像 yazi 一样先判断命令是否存在（按 PATH 查找）
-	local trae_ok, trae_path = deps.command_exists("traecli")
+	local trae_ok, trae_path = deps.command_exists("traex")
 	if trae_ok then
-		split_right(get_login_shell_args(trae_path or "traecli"), "正在打开 traecli…")
+		split_right(get_login_shell_args(trae_path or "traex"), "正在打开 traex…")
 		return
 	end
 
-	-- traecli 不存在时，尝试 fallback 到 claude（存在性判断与安装引导按 yazi 方式）
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
-		split_right(get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"), "未检测到 traecli，正在打开 claude…")
+		split_right(get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"), "未检测到 traex，正在打开 claude…")
 		return
 	end
 
-	window:toast_notification("WezTerm", "未检测到 traecli/claude，将引导安装 claude…", nil, 4000)
+	window:toast_notification("WezTerm", "未检测到 traex/claude，将引导安装 claude…", nil, 4000)
 	deps.prompt_install(window, pane, deps.get_missing_for_bins({ "claude" }))
 end
 
@@ -442,13 +440,13 @@ keys_config.keys = {
 	{
 		key = "T",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_traecli),
+		action = wezterm.action_callback(split_traex),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "t",
 		mods = "CMD|SHIFT",
-		action = wezterm.action_callback(split_traecli),
+		action = wezterm.action_callback(split_traex),
 	},
 	{
 		key = "h",
