@@ -49,9 +49,11 @@ Several functions handle differences between WezTerm releases:
 
 `keys.lua` builds its `keys_config` table, then calls `resurrect.setup(keys_config)` before registering. `resurrect.lua` receives this table and injects `CMD+SHIFT+s` (save workspace+window state) and `CMD+SHIFT+r` (fuzzy restore) keybindings via `table.insert`. This is the only case where one module mutates another module's fragment before registration.
 
-### Tabs: title suppression for AI tools
+### Tabs: title suppression for AI tools and transient full-screen commands
 
 The `format-tab-title` handler in `tabs.lua` has a `no_title_procs` set (`claude`, `codex`, `trae`) — when the foreground process is one of these, the app-set title is ignored and the process name is used instead. This prevents AI tool prompts/context from polluting the tab bar.
+
+`top`, `htop`, and `btop` are treated as transient shell commands for tab display purposes: the tab keeps the shell-style icon/title source instead of switching visual style just because a monitoring TUI is temporarily in the foreground.
 
 ### Color schemes
 

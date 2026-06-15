@@ -39,13 +39,13 @@
   - `Half` 强度 → Medium 字重（避免 Light 过细）
   - `Normal` 斜体 → Medium 字重 + 关闭斜体（保持直立）
   - `Bold` 强度 → Bold 字重（提供视觉区分）
-- 基础参数：`font_size = 16.0`、`line_height = 1.1`、`cell_width = 1.0`（见 `config/font.lua:40`）
+- 基础参数：`font_size = 18.0`、`line_height = 1.1`、`cell_width = 1.0`（见 `config/font.lua:40`）
 - 关闭连字：`harfbuzz_features = { "calt=0", "clig=0", "liga=0" }`（见 `config/font.lua:44`）
 - 关闭 ANSI 粗体提亮（`bold_brightens_ansi_colors = false`）与 cap-height 缩放（见 `config/font.lua:40`）
 
 ### `config/window.lua`：窗口外观
 
-- 初始窗口大小：`140x38`（见 `config/window.lua:6`）
+- 初始窗口大小：`120x32`（见 `config/window.lua:6`）
 - 启用 `use_resize_increments`，让窗口缩放按字符栅格递增（见 `config/window.lua:10`）
 - 内边距：左右 20px、顶部 60px、底部 10px（见 `config/window.lua:13`）
 - macOS 视觉效果：集成按钮标题栏（`INTEGRATED_BUTTONS|RESIZE`）、背景模糊(20)、半透明(0.92)（见 `config/window.lua:20`）
@@ -55,7 +55,6 @@
 
 - 左 Option 作为 Meta（Alt）更利于 Vim/Neovim 等快捷键；右 Option 保留输入法组合键（见 `config/macos.lua:5`）
 - 启用原生全屏模式，不在关闭所有窗口时退出（见 `config/macos.lua:8`）
-- AI pane 自动调整逻辑位于 `config/keys.lua`，在 `window-resized` 事件中触发（见下）
 
 ### `config/shell.lua`：默认 Shell 与 TERM
 
@@ -76,6 +75,7 @@
 - 自定义 `format-tab-title` 事件处理（见 `config/tabs.lua:115`）：
   - 根据前台进程显示对应 Nerd Font 图标（nvim/vim → ``、shell → ``、git/lazygit → ``、docker → ``、python → ``、node → ``、go → ``、lua → ``、rust → ``、yazi → ``、AI 工具 → `` 等）
   - Tab 标题文本优先显示当前活跃 pane 的目录名；拿不到 cwd 时回退到进程名或 pane 标题
+  - `top`/`htop`/`btop` 这类临时全屏监控程序会按 shell tab 处理，避免运行时把 tab 风格切成另一套
   - 活跃 tab 左侧显示粉色圆点指示器（`●`）
   - AI 工具（claude/codex/trae）的前台进程会抑制 app 标题，仅显示进程名
   - Tab 标题过长时自动截断并加省略号（`…`），过短时用空格补齐
@@ -92,7 +92,7 @@
 
 - 当前启用 Ghostty 默认（StyleDark）主题（见 `config/theme.lua`）
 
-### `config/keys.lua`：键位、鼠标与 AI Pane 管理
+### `config/keys.lua`：键位与鼠标
 
 鼠标：
 
@@ -106,7 +106,7 @@
 - `CMD+SHIFT+i`：手动弹出依赖安装提示（见 `config/keys.lua:728`）
 - `CMD+SHIFT+c/C`：右侧分屏启动 `claude`；若未检测到则引导安装（见 `config/keys.lua:785`）
 - `CMD+SHIFT+x/X`：右侧分屏启动 `codex`；若未检测到则引导安装（见 `config/keys.lua:746`）
-- `CMD+SHIFT+t/T`：右侧分屏启动 `traecli`（按 `PATH` 查找）；若未检测到则 fallback 到 `claude`；二者都不存在会引导安装 `claude`（见 `config/keys.lua:756`）
+- `CMD+SHIFT+t/T`：右侧分屏启动 `traex`（按 `PATH` 查找）；若未检测到则 fallback 到 `claude`；二者都不存在会引导安装 `claude`
 - `CMD+SHIFT+o/O`：在浏览器中打开当前选中文本中的 http/https 链接（见 `config/keys.lua:735`）
 - `F1`：进入复制模式（见 `config/keys.lua:800`）
 - Pane 焦点移动：`CMD+h/j/k/l`（见 `config/keys.lua:768`）
@@ -125,14 +125,8 @@
 此外，`keys.lua` 内部实现了：
 
 - `get_pane_cwd()`：兼容不同 WezTerm 版本返回的 cwd 类型（Url 对象/字符串），并提供多级兜底解析（见 `config/keys.lua:15`）
-- AI Pane 追踪与自动调整（见 `config/keys.lua:132`）：
-  - 启动 AI 工具分屏时，`remember_new_ai_pane()` 将新 pane ID 记录到 `tracked_ai_panes_by_tab`（按 tab ID 索引）
-  - 监听 `window-resized` 事件，自动调整当前 active tab 中被追踪的 AI pane 宽度
-  - 仅当被追踪 pane 为最右侧 pane 时才调整（避免影响用户手动布局）
-  - 全屏时目标宽度 33%，非全屏时 50%（`desired_ai_panel_percent`，见 `config/keys.lua:364`）
-  - macOS 原生全屏动画为异步过渡，通过多次延迟回调（0.12s / 0.35s / 0.75s）等待几何稳定
-  - tab 内只剩一个 pane 或被追踪 pane 消失时自动清理追踪记录
-  - 通过 `pcall` 包裹防止调整失败影响正常使用
+- `split_right_prefer_exec()`：优先直接启动命令，失败时退回登录 shell 执行，减少 `PATH` 或 shell 环境差异导致的问题
+- `resize_pane_by_percent()`：按当前 pane 尺寸的 `5%` 做比例缩放，并对左右/上下方向分别设置最大步长
 
 ### 跨模块交互
 
@@ -161,7 +155,7 @@
 | `CMD+SHIFT+g/G` | 新标签页打开 lazygit |
 | `CMD+SHIFT+c/C` | 右侧分屏：claude |
 | `CMD+SHIFT+x/X` | 右侧分屏：codex |
-| `CMD+SHIFT+t/T` | 右侧分屏：traecli（fallback: claude） |
+| `CMD+SHIFT+t/T` | 右侧分屏：traex（fallback: claude） |
 | `CMD+SHIFT+o/O` | 在浏览器中打开选中链接 |
 | `CMD+SHIFT+i` | 手动触发依赖检测/安装 |
 | `CMD+SHIFT+s` | 保存窗口+工作区状态 |

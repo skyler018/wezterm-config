@@ -154,10 +154,27 @@ local function process_icon(process_name)
 	return "󰆍"
 end
 
+local TRANSIENT_SHELL_PROCS = {
+	top = true,
+	htop = true,
+	btop = true,
+}
+
+local function display_process_name(process_name)
+	local proc = (process_name or ""):lower()
+	if TRANSIENT_SHELL_PROCS[proc] then
+		-- 这类全屏监控程序通常只是 shell 内的临时前台命令，不应改变 tab 的整体风格。
+		return "zsh"
+	end
+
+	return process_name or ""
+end
+
 local function create_title(tab, max_width)
 	local tab_index = tostring((tab.tab_index or 0) + 1)
 	local process_name = clean_process_name(tab.active_pane.foreground_process_name)
-	local icon = process_icon(process_name)
+	local shown_process_name = display_process_name(process_name)
+	local icon = process_icon(shown_process_name)
 	local cwd_name = basename(get_pane_cwd(tab.active_pane))
 	local base_title = sanitize_title(tab.active_pane.title)
 
@@ -165,23 +182,25 @@ local function create_title(tab, max_width)
 		claude = true,
 		codex = true,
 		traex = true,
-		top = true,
-		htop = true,
-		btop = true,
 	}
 	if base_title == "" or base_title == "wezterm" then
-		base_title = process_name
+		base_title = shown_process_name
 	end
 
 	if cwd_name and cwd_name ~= "" then
 		base_title = cwd_name
-	elseif no_title_procs[process_name:lower()] then
-		base_title = process_name
+	elseif no_title_procs[shown_process_name:lower()] then
+		base_title = shown_process_name
 	end
 
 	local title = base_title
-	if not (cwd_name and cwd_name ~= "") and process_name ~= "" and base_title ~= "" and process_name ~= base_title then
-		title = process_name .. " ~ " .. base_title
+	if
+		not (cwd_name and cwd_name ~= "")
+		and shown_process_name ~= ""
+		and base_title ~= ""
+		and shown_process_name ~= base_title
+	then
+		title = shown_process_name .. " ~ " .. base_title
 	end
 
 	if title == "" then
@@ -202,7 +221,22 @@ local function create_title(tab, max_width)
 	return title
 end
 
-wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+local function fallback_title(tab, max_width)
+	local tab_index = tostring((tab and tab.tab_index or 0) + 1)
+	local inner_max = math.max(6, (max_width or 25) - 4)
+	local title = tab_index .. "  shell"
+
+	if #title > inner_max then
+		title = title:sub(1, inner_max - 1) .. "…"
+	end
+	if #title < inner_max then
+		title = title .. string.rep(" ", inner_max - #title)
+	end
+
+	return title
+end
+
+local function build_tab_cells(tab, hover, max_width)
 	local state = "default"
 	if tab.is_active then
 		state = "active"
@@ -212,7 +246,11 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 
 	local text_colors = COLORS["text_" .. state]
 	local edge_colors = COLORS["scircle_" .. state]
-	local title = create_title(tab, max_width)
+	local ok_title, title = pcall(create_title, tab, max_width)
+	if not ok_title or type(title) ~= "string" or title == "" then
+		title = fallback_title(tab, max_width)
+	end
+
 	local active_indicator = tab.is_active and {
 		{ Foreground = { Color = "#f38ba8" } },
 		{ Text = "● " },
@@ -238,9 +276,37 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 		table.insert(cells, 10, { Text = title .. " " })
 	else
 		table.insert(cells, 7, { Text = title .. " " })
+		table.insert(cells, 7, { Foreground = { Color = text_colors.fg } })
 	end
 
 	return cells
+end
+
+wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+	local ok, cells = pcall(build_tab_cells, tab, hover, max_width)
+	if ok and type(cells) == "table" then
+		return cells
+	end
+
+	local state = tab.is_active and "active" or (hover and "hover" or "default")
+	local text_colors = COLORS["text_" .. state]
+	local edge_colors = COLORS["scircle_" .. state]
+	local title = fallback_title(tab, max_width)
+
+	return {
+		{ Background = { Color = edge_colors.bg } },
+		{ Foreground = { Color = edge_colors.fg } },
+		{ Text = ICON_LEFT },
+		{ Background = { Color = text_colors.bg } },
+		{ Foreground = { Color = text_colors.fg } },
+		{ Attribute = { Intensity = "Bold" } },
+		{ Text = " " },
+		{ Foreground = { Color = text_colors.fg } },
+		{ Text = title .. " " },
+		{ Background = { Color = edge_colors.bg } },
+		{ Foreground = { Color = edge_colors.fg } },
+		{ Text = ICON_RIGHT },
+	}
 end)
 
 local init = require("config/init")
