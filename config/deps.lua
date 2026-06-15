@@ -2,6 +2,7 @@ local wezterm = require 'wezterm'
 local act = wezterm.action
 
 local M = {}
+local command_exists_cache = {}
 
 -- 只管理与键映射强相关的第三方工具（根据确认：不纳入 traecli）
 local MANAGED_BINS = {
@@ -35,12 +36,19 @@ function M.get_shell()
 end
 
 function M.command_exists(bin)
+  local cached = command_exists_cache[bin]
+  if cached ~= nil then
+    return cached[1], cached[2]
+  end
+
   local shell = M.get_shell()
   local ok, stdout = wezterm.run_child_process({ shell, '-lc', 'command -v ' .. shell_quote(bin) })
   local path = trim(stdout)
   if ok and #path > 0 then
+    command_exists_cache[bin] = { true, path }
     return true, path
   end
+  command_exists_cache[bin] = { false, nil }
   return false, nil
 end
 

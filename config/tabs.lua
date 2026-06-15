@@ -34,6 +34,16 @@ local function trim(text)
 	return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+local function sanitize_title(text)
+	text = trim(text or "")
+	-- 去掉常见 ANSI/OSC 控制序列与不可见控制字符，避免全屏 TUI 污染 tab 标题渲染。
+	text = text:gsub("\27%][^\7]*\7", "")
+	text = text:gsub("\27%[[%d;?]*[%a]", "")
+	text = text:gsub("[%c]", " ")
+	text = text:gsub("%s+", " ")
+	return trim(text)
+end
+
 local function get_pane_cwd(pane)
 	if not pane then
 		return nil
@@ -128,6 +138,9 @@ local function process_icon(process_name)
 	if proc:find("htop", 1, true) or proc:find("btop", 1, true) then
 		return ""
 	end
+	if proc:find("top", 1, true) then
+		return ""
+	end
 	if proc:find("yazi", 1, true) then
 		return ""
 	end
@@ -146,9 +159,16 @@ local function create_title(tab, max_width)
 	local process_name = clean_process_name(tab.active_pane.foreground_process_name)
 	local icon = process_icon(process_name)
 	local cwd_name = basename(get_pane_cwd(tab.active_pane))
-	local base_title = trim(tab.active_pane.title)
+	local base_title = sanitize_title(tab.active_pane.title)
 
-	local no_title_procs = { claude = true, codex = true, traex = true }
+	local no_title_procs = {
+		claude = true,
+		codex = true,
+		traex = true,
+		top = true,
+		htop = true,
+		btop = true,
+	}
 	if base_title == "" or base_title == "wezterm" then
 		base_title = process_name
 	end

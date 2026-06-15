@@ -13,6 +13,71 @@ local function get_login_shell_args(...)
 	return args
 end
 
+local function split_right_command(window, pane, options)
+	if not window or not pane or not options then
+		return false, "missing window/pane/options"
+	end
+
+	if options.toast_title and #options.toast_title > 0 then
+		window:toast_notification("WezTerm", options.toast_title, nil, 1200)
+	end
+
+	local ok, err = pcall(function()
+		window:perform_action(
+			act.SplitPane({
+				direction = "Right",
+				size = { Percent = 50 },
+				command = {
+					args = options.args,
+					set_environment_variables = {
+						PATH = os.getenv("PATH"),
+					},
+				},
+			}),
+			pane
+		)
+	end)
+
+	if not ok then
+		return false, tostring(err)
+	end
+
+	return true, nil
+end
+
+local function split_right_prefer_exec(window, pane, bin_path, fallback_args, toast_title)
+	local direct_ok, direct_err = split_right_command(window, pane, {
+		args = fallback_args,
+		toast_title = toast_title,
+	})
+	if direct_ok then
+		return true
+	end
+
+	local shell_args = get_login_shell_args(table.unpack(fallback_args))
+	local shell_ok, shell_err = split_right_command(window, pane, {
+		args = shell_args,
+		toast_title = nil,
+	})
+	if shell_ok then
+		window:toast_notification(
+			"WezTerm",
+			"直接启动失败，已回退到 shell 启动：" .. tostring(bin_path),
+			nil,
+			2500
+		)
+		return true
+	end
+
+	window:toast_notification(
+		"WezTerm",
+		"打开分屏失败：" .. tostring(direct_err or shell_err),
+		nil,
+		8000
+	)
+	return false
+end
+
 local function get_pane_cwd(pane)
 	local cwd_uri = pane:get_current_working_dir()
 	if not cwd_uri then
@@ -216,35 +281,15 @@ local function split_claude(window, pane)
 		return
 	end
 
-	local function split_right(args, toast_title)
-		if toast_title and #toast_title > 0 then
-			window:toast_notification("WezTerm", toast_title, nil, 1200)
-		end
-
-		local ok, err = pcall(function()
-			window:perform_action(
-				act.SplitPane({
-					direction = "Right",
-					size = { Percent = 50 },
-					command = {
-						args = args,
-						set_environment_variables = {
-							PATH = os.getenv("PATH"),
-						},
-					},
-				}),
-				pane
-			)
-		end)
-		if not ok then
-			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
-			return
-		end
-	end
-
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
-		split_right(get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"), "正在打开 claude…")
+		split_right_prefer_exec(
+			window,
+			pane,
+			claude_path or "claude",
+			{ claude_path or "claude", "--dangerously-skip-permissions" },
+			"正在打开 claude…"
+		)
 		return
 	end
 
@@ -257,35 +302,15 @@ local function split_codex(window, pane)
 		return
 	end
 
-	local function split_right(args, toast_title)
-		if toast_title and #toast_title > 0 then
-			window:toast_notification("WezTerm", toast_title, nil, 1200)
-		end
-
-		local ok, err = pcall(function()
-			window:perform_action(
-				act.SplitPane({
-					direction = "Right",
-					size = { Percent = 50 },
-					command = {
-						args = args,
-						set_environment_variables = {
-							PATH = os.getenv("PATH"),
-						},
-					},
-				}),
-				pane
-			)
-		end)
-		if not ok then
-			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
-			return
-		end
-	end
-
 	local codex_ok, codex_path = deps.command_exists("codex")
 	if codex_ok then
-		split_right(get_login_shell_args(codex_path or "codex"), "正在打开 codex…")
+		split_right_prefer_exec(
+			window,
+			pane,
+			codex_path or "codex",
+			{ codex_path or "codex" },
+			"正在打开 codex…"
+		)
 		return
 	end
 
@@ -298,41 +323,27 @@ local function split_traex(window, pane)
 		return
 	end
 
-	local function split_right(args, toast_title)
-		if toast_title and #toast_title > 0 then
-			window:toast_notification("WezTerm", toast_title, nil, 1200)
-		end
-
-		local ok, err = pcall(function()
-			window:perform_action(
-				act.SplitPane({
-					direction = "Right",
-					size = { Percent = 50 },
-					command = {
-						args = args,
-						set_environment_variables = {
-							PATH = os.getenv("PATH"),
-						},
-					},
-				}),
-				pane
-			)
-		end)
-		if not ok then
-			window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(err), nil, 8000)
-			return
-		end
-	end
-
 	local trae_ok, trae_path = deps.command_exists("traex")
 	if trae_ok then
-		split_right(get_login_shell_args(trae_path or "traex"), "正在打开 traex…")
+		split_right_prefer_exec(
+			window,
+			pane,
+			trae_path or "traex",
+			{ trae_path or "traex" },
+			"正在打开 traex…"
+		)
 		return
 	end
 
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
-		split_right(get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"), "未检测到 traex，正在打开 claude…")
+		split_right_prefer_exec(
+			window,
+			pane,
+			claude_path or "claude",
+			{ claude_path or "claude", "--dangerously-skip-permissions" },
+			"未检测到 traex，正在打开 claude…"
+		)
 		return
 	end
 
