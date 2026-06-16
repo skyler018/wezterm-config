@@ -3,6 +3,8 @@ local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.
 
 local M = {}
 local ENABLE_WEZTERM_RESURRECT = false
+local is_macos = wezterm.target_triple and wezterm.target_triple:find('darwin', 1, true) ~= nil
+local PRIMARY_SHIFT_MOD = is_macos and 'CMD|SHIFT' or 'CTRL|SHIFT'
 
 function M.setup(keys_config)
   if not ENABLE_WEZTERM_RESURRECT then
@@ -12,7 +14,7 @@ function M.setup(keys_config)
   -- 快速保存状态 (Window + Workspace)
   table.insert(keys_config.keys, {
     key = "s",
-    mods = "CMD|SHIFT",
+    mods = PRIMARY_SHIFT_MOD,
     action = wezterm.action_callback(function(win, pane)
       resurrect.state_manager.save_state(resurrect.workspace_state.get_workspace_state())
       resurrect.window_state.save_window_action()
@@ -23,7 +25,7 @@ function M.setup(keys_config)
   -- 快速恢复状态 (通过 fuzzy finder 模糊搜索选择恢复)
   table.insert(keys_config.keys, {
     key = "r",
-    mods = "CMD|SHIFT",
+    mods = PRIMARY_SHIFT_MOD,
     action = wezterm.action_callback(function(win, pane)
       resurrect.fuzzy_loader.fuzzy_load(win, pane, function(id, label)
         local type = string.match(id, "^([^/]+)") -- match before '/'

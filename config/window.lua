@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 
 local window_config = {}
+local is_macos = wezterm.target_triple and wezterm.target_triple:find("darwin", 1, true) ~= nil
 
 -- 初始化窗口大小
 window_config.initial_cols = 120
@@ -17,9 +18,8 @@ window_config.window_padding = {
 	bottom = "10px",
 }
 
-window_config.window_decorations = "INTEGRATED_BUTTONS|RESIZE"
---config.window_decorations = "TITLE|RESIZE"   -- 保留标题栏和可调整边框
-window_config.macos_window_background_blur = 20 -- 背景模糊，阴影效果会自然呈现
+window_config.window_decorations = is_macos and "INTEGRATED_BUTTONS|RESIZE" or "TITLE|RESIZE"
+window_config.macos_window_background_blur = is_macos and 20 or nil -- 背景模糊，阴影效果会自然呈现
 window_config.window_background_opacity = 0.92 -- 半透明
 window_config.window_frame = {
 	-- Keep the titlebar closer to Kevin's appearance config.

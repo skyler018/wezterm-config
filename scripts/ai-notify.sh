@@ -4,6 +4,29 @@ set -eu
 event="${1:-notification}"
 agent_hint="${2:-}"
 state_file="${TMUX_AGENT_STATE_FILE:-}"
+tmp_root="${TMPDIR:-/tmp}"
+state_dir="${TMUX_AGENT_STATE_DIR:-${tmp_root%/}/tmux-agent-state}"
+tmux_script_dir="${TMUX_AGENT_TMUX_SCRIPT_DIR:-}"
+
+if [ -z "$tmux_script_dir" ] && [ -n "${HOME:-}" ]; then
+  tmux_script_dir="${HOME}/.tmux/scripts"
+fi
+
+run_tmux_helper() {
+  helper_name="${1:-}"
+  shift || true
+
+  if [ -z "$helper_name" ] || [ -z "$tmux_script_dir" ]; then
+    return 0
+  fi
+
+  helper_path="${tmux_script_dir%/}/${helper_name}"
+  if [ ! -x "$helper_path" ]; then
+    return 0
+  fi
+
+  "$helper_path" "$@" >/dev/null 2>&1 || true
+}
 
 resolve_state_file() {
   if [ -n "$state_file" ] && [ -r "$state_file" ]; then
@@ -20,7 +43,6 @@ resolve_state_file() {
     return 1
   fi
 
-  state_dir="/tmp/tmux-agent-state"
   cwd_hash="$(printf '%s' "$current_cwd" | shasum | awk '{print $1}')"
   candidate="${state_dir}/${agent_hint}-${cwd_hash}.env"
   if [ -r "$candidate" ]; then
@@ -184,21 +206,21 @@ case "$event" in
     if [ "$is_target_active" = "1" ]; then
       tmux set-option -pt "$target_pane" @agent_attention "0"
       tmux set-option -pt "$target_pane" @agent_attention_at ""
-      /Users/bytedance/.tmux/scripts/recompute-window-agent-attention.sh "$target_pane" >/dev/null 2>&1 || true
-      /Users/bytedance/.tmux/scripts/apply-agent-tab-attention.sh >/dev/null 2>&1 || true
+      run_tmux_helper "recompute-window-agent-attention.sh" "$target_pane"
+      run_tmux_helper "apply-agent-tab-attention.sh"
       exit 0
     fi
     tmux set-option -pt "$target_pane" @agent_attention "1"
     tmux set-option -pt "$target_pane" @agent_attention_at "$(date +%s)"
-    /Users/bytedance/.tmux/scripts/recompute-window-agent-attention.sh "$target_pane" >/dev/null 2>&1 || true
-    /Users/bytedance/.tmux/scripts/apply-agent-tab-attention.sh >/dev/null 2>&1 || true
+    run_tmux_helper "recompute-window-agent-attention.sh" "$target_pane"
+    run_tmux_helper "apply-agent-tab-attention.sh"
     tmux display-message "agent needs input: ${agent_name} (press CMD+g in WezTerm)"
     ;;
   done|stop)
     tmux set-option -pt "$target_pane" @agent_attention "0"
     tmux set-option -pt "$target_pane" @agent_attention_at ""
-    /Users/bytedance/.tmux/scripts/recompute-window-agent-attention.sh "$target_pane" >/dev/null 2>&1 || true
-    /Users/bytedance/.tmux/scripts/apply-agent-tab-attention.sh >/dev/null 2>&1 || true
+    run_tmux_helper "recompute-window-agent-attention.sh" "$target_pane"
+    run_tmux_helper "apply-agent-tab-attention.sh"
     ;;
   *)
     exit 0

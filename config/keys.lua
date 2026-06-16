@@ -3,6 +3,9 @@ local act = wezterm.action
 local deps = require("config/deps")
 
 local keys_config = {}
+local is_macos = wezterm.target_triple and wezterm.target_triple:find("darwin", 1, true) ~= nil
+local PRIMARY_MOD = is_macos and "CMD" or "CTRL"
+local PRIMARY_SHIFT_MOD = PRIMARY_MOD .. "|SHIFT"
 -- WezTerm 只保留 GUI 容器职责；需要恢复旧的 pane 工作流时改回 true。
 local USE_WEZTERM_PANES = false
 local AGENT_LAUNCH_MODE = USE_WEZTERM_PANES and "split" or "tab"
@@ -737,114 +740,114 @@ keys_config.mouse_bindings = {
 keys_config.keys = {
 	{
 		key = "y",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("y", "tmux: 新建 window 打开 yazi"),
 	},
 	{
 		key = "Y",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("y", "tmux: 新建 window 打开 yazi"),
 	},
 	{
 		key = "g",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("g", "tmux: 打开 lazygit popup", open_lazygit),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为大写
 	{
 		key = "G",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("g", "tmux: 打开 lazygit popup", open_lazygit),
 	},
 	{
 		key = "i",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = wezterm.action_callback(function(window, pane)
 			deps.prompt_install(window, pane, deps.get_missing_managed_deps())
 		end),
 	},
 	{
 		key = "o",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = wezterm.action_callback(open_selected_http_url),
 	},
 	{
 		key = "O",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = wezterm.action_callback(open_selected_http_url),
 	},
 	{
 		key = "X",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "x",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
 	},
 	{
 		key = "T",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "t",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
 	},
 	{
 		key = "t",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = tmux_prefixed_send("c", "tmux: 新建 window"),
 	},
 	{
 		key = "h",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = pane_direction_action("Left"),
 	},
 	{
 		key = "l",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = pane_direction_action("Right"),
 	},
 
 	{
 		key = "k",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = pane_direction_action("Up"),
 	},
 	{
 		key = "C",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
 	},
 	{
 		key = "c",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
 	},
 
 	{
 		key = "j",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = pane_direction_action("Down"),
 	},
 	{
 		key = "g",
-		mods = "CMD",
+		mods = PRIMARY_MOD,
 		action = jump_to_agent_attention_action(),
 	},
 	{
 		key = "[",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("\x08", "tmux: 上一个 window"),
 	},
 	{
 		key = "]",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("\x0c", "tmux: 下一个 window"),
 	},
 	{
@@ -856,68 +859,68 @@ keys_config.keys = {
 	-- resize pane（仅在同 tab 多 pane 时生效）
 	{
 		key = "h",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Left"),
 	},
 	{
 		key = "H",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Left"),
 	},
 	{
 		key = "l",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Right"),
 	},
 	{
 		key = "L",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Right"),
 	},
 	{
 		key = "k",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Up"),
 	},
 	{
 		key = "K",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Up"),
 	},
 	{
 		key = "j",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Down"),
 	},
 	{
 		key = "J",
-		mods = "CMD|SHIFT",
+		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Down"),
 	},
 	-- 新窗口
-	{ key = "n", mods = "CMD", action = wezterm.action.SpawnWindow },
-	{ key = "1", mods = "CMD", action = tmux_prefixed_send("1", "tmux: window 1") },
-	{ key = "2", mods = "CMD", action = tmux_prefixed_send("2", "tmux: window 2") },
-	{ key = "3", mods = "CMD", action = tmux_prefixed_send("3", "tmux: window 3") },
-	{ key = "4", mods = "CMD", action = tmux_prefixed_send("4", "tmux: window 4") },
-	{ key = "5", mods = "CMD", action = tmux_prefixed_send("5", "tmux: window 5") },
-	{ key = "6", mods = "CMD", action = tmux_prefixed_send("6", "tmux: window 6") },
-	{ key = "7", mods = "CMD", action = tmux_prefixed_send("7", "tmux: window 7") },
-	{ key = "8", mods = "CMD", action = tmux_prefixed_send("8", "tmux: window 8") },
-	{ key = "9", mods = "CMD", action = tmux_prefixed_send("9", "tmux: window 9") },
+	{ key = "n", mods = PRIMARY_MOD, action = wezterm.action.SpawnWindow },
+	{ key = "1", mods = PRIMARY_MOD, action = tmux_prefixed_send("1", "tmux: window 1") },
+	{ key = "2", mods = PRIMARY_MOD, action = tmux_prefixed_send("2", "tmux: window 2") },
+	{ key = "3", mods = PRIMARY_MOD, action = tmux_prefixed_send("3", "tmux: window 3") },
+	{ key = "4", mods = PRIMARY_MOD, action = tmux_prefixed_send("4", "tmux: window 4") },
+	{ key = "5", mods = PRIMARY_MOD, action = tmux_prefixed_send("5", "tmux: window 5") },
+	{ key = "6", mods = PRIMARY_MOD, action = tmux_prefixed_send("6", "tmux: window 6") },
+	{ key = "7", mods = PRIMARY_MOD, action = tmux_prefixed_send("7", "tmux: window 7") },
+	{ key = "8", mods = PRIMARY_MOD, action = tmux_prefixed_send("8", "tmux: window 8") },
+	{ key = "9", mods = PRIMARY_MOD, action = tmux_prefixed_send("9", "tmux: window 9") },
 
 	-- 分屏
-	{ key = "d", mods = "CMD", action = pane_split_action("horizontal") },
-	{ key = "D", mods = "CMD|SHIFT", action = pane_split_action("vertical") },
+	{ key = "d", mods = PRIMARY_MOD, action = pane_split_action("horizontal") },
+	{ key = "D", mods = PRIMARY_SHIFT_MOD, action = pane_split_action("vertical") },
 
 	-- 关闭 pane
-	{ key = "w", mods = "CMD", action = pane_close_action() },
+	{ key = "w", mods = PRIMARY_MOD, action = pane_close_action() },
 
 	-- 放大 pane
-	{ key = "Enter", mods = "CMD", action = pane_zoom_action() },
+	{ key = "Enter", mods = PRIMARY_MOD, action = pane_zoom_action() },
 
 	-- 全屏
-	{ key = "f", mods = "CMD|SHIFT", action = "ToggleFullScreen" },
+	{ key = "f", mods = PRIMARY_SHIFT_MOD, action = "ToggleFullScreen" },
 }
 
 local init = require("config/init")
