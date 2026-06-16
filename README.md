@@ -113,6 +113,7 @@
 - `CMD+SHIFT+c/C`：默认在新标签页打开 `claude`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `claude`
 - `CMD+SHIFT+x/X`：默认在新标签页打开 `codex`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `codex`
 - `CMD+SHIFT+t/T`：默认在新标签页打开 `traex`（fallback: `claude`）；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split agent pane
+- `CMD+g`：跳到当前需要 attention 的 AI agent；这是用户侧主入口，内部会转发给 tmux 的 agent attention 跳转脚本
 - `CMD+SHIFT+o/O`：在浏览器中打开当前选中文本中的 http/https 链接（见 `config/keys.lua:735`）
 - `CMD+SHIFT+[` / `CMD+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
 - `CMD+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
@@ -160,6 +161,7 @@
 | `CMD+SHIFT+c/C` | 新标签页打开 claude |
 | `CMD+SHIFT+x/X` | 新标签页打开 codex |
 | `CMD+SHIFT+t/T` | 新标签页打开 traex（fallback: claude） |
+| `CMD+g` | 跳到需要处理的 AI agent |
 | `CMD+SHIFT+o/O` | 在浏览器中打开选中链接 |
 | `CMD+SHIFT+[` | 切到上一个 tmux window |
 | `CMD+SHIFT+]` | 切到下一个 tmux window |

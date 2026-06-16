@@ -43,6 +43,10 @@ local function tmux_workflow_action(keys, hint_label, callback)
 	return tmux_prefixed_send(keys, hint_label)
 end
 
+local function tmux_user_action(keys, user_hint_label)
+	return tmux_prefixed_send(keys, user_hint_label)
+end
+
 local function get_login_shell_args(...)
 	local args = { deps.get_shell(), "-ic", 'exec "$0" "$@"' }
 	for i = 1, select("#", ...) do
@@ -569,6 +573,10 @@ local function pane_close_action()
 	return tmux_prefixed_send("x", "tmux: 关闭当前 pane（需确认）")
 end
 
+local function jump_to_agent_attention_action()
+	return tmux_user_action("\x1bj", "AI 通知跳转：定位到需要处理的 agent")
+end
+
 local function split_claude(window, pane)
 	if not window or not pane then
 		return
@@ -823,6 +831,11 @@ keys_config.keys = {
 		key = "j",
 		mods = "CMD",
 		action = pane_direction_action("Down"),
+	},
+	{
+		key = "g",
+		mods = "CMD",
+		action = jump_to_agent_attention_action(),
 	},
 	{
 		key = "[",

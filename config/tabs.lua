@@ -137,9 +137,69 @@ local function basename(path)
 	return name or normalized
 end
 
+local function tmux_window_name()
+	local success, stdout, _ = wezterm.run_child_process({ "tmux", "display-message", "-p", "#{window_name}" })
+	if not success or type(stdout) ~= "string" then
+		return nil
+	end
+
+	local name = sanitize_title(stdout)
+	if name == "" then
+		return nil
+	end
+
+	return name
+end
+
+local function is_noise_title(text)
+	local value = sanitize_title(text)
+	if value == "" then
+		return true
+	end
+
+	-- 常见的 shell/tty 噪声标题，例如随机 token、hostname 占位值。
+	if value:match("^[A-Z0-9][A-Z0-9%-_]+$") and #value >= 6 then
+		return true
+	end
+
+	if value == "wezterm" then
+		return true
+	end
+
+	return false
+end
+
+local function looks_like_noisy_tmux_title(text)
+	local value = sanitize_title(text)
+	if value == "" then
+		return false
+	end
+
+	-- tmux/terminal title 有时会退化成无语义 token，例如随机 hostname、tty token。
+	if value:match("^[A-Z0-9][A-Z0-9%-_]+$") and #value >= 6 then
+		return true
+	end
+
+	return false
+end
+
+local SHELL_LIKE_PROCS = {
+	zsh = true,
+	bash = true,
+	fish = true,
+	tmux = true,
+}
+
+local function prefers_structured_title(process_name)
+	return SHELL_LIKE_PROCS[(process_name or ""):lower()] == true
+end
+
 local function process_icon(process_name)
 	local proc = (process_name or ""):lower()
 
+	if proc:find("tmux", 1, true) then
+		return ""
+	end
 	if proc:find("nvim", 1, true) or proc:find("vim", 1, true) then
 		return ""
 	end
@@ -210,24 +270,46 @@ local function display_process_name(process_name)
 	return process_name or ""
 end
 
+local function is_tmux_process(process_name)
+	return (process_name or ""):lower() == "tmux"
+end
+
 local function create_title(tab, max_width)
 	local tab_index = tostring((tab.tab_index or 0) + 1)
 	local process_name = clean_process_name(tab.active_pane.foreground_process_name)
 	local shown_process_name = display_process_name(process_name)
+	local tmux_process = is_tmux_process(shown_process_name)
 	local icon = process_icon(shown_process_name)
 	local cwd_name = basename(get_pane_cwd(tab.active_pane))
 	local base_title = sanitize_title(tab.active_pane.title)
+	local tmux_name = tmux_process and tmux_window_name() or nil
 
 	local no_title_procs = {
 		claude = true,
 		codex = true,
 		traex = true,
 	}
-	if base_title == "" or base_title == "wezterm" then
+	if is_noise_title(base_title) then
 		base_title = shown_process_name
 	end
 
-	if cwd_name and cwd_name ~= "" then
+	if prefers_structured_title(shown_process_name) then
+		if (tmux_name and tmux_name ~= "") and (looks_like_noisy_tmux_title(base_title) or base_title == shown_process_name) then
+			base_title = tmux_name
+		end
+		if base_title == "" or base_title == shown_process_name or is_noise_title(base_title) or looks_like_noisy_tmux_title(base_title) then
+			base_title = tmux_name or cwd_name or shown_process_name
+		end
+	elseif tmux_process then
+		if looks_like_noisy_tmux_title(base_title) and tmux_name and tmux_name ~= "" then
+			base_title = tmux_name
+		end
+		-- tmux 下 WezTerm 外层 pane 的 cwd 往往不会跟随 tmux window 切换，
+		-- 继续优先显示 cwd 会让多个 tab 长时间显示成同一个旧目录。
+		if base_title == "" or base_title:lower() == shown_process_name:lower() then
+			base_title = tmux_name or cwd_name or shown_process_name
+		end
+	elseif cwd_name and cwd_name ~= "" then
 		base_title = cwd_name
 	elseif no_title_procs[shown_process_name:lower()] then
 		base_title = shown_process_name
@@ -235,6 +317,8 @@ local function create_title(tab, max_width)
 
 	local title = base_title
 	if
+		not tmux_process
+		and
 		not (cwd_name and cwd_name ~= "")
 		and shown_process_name ~= ""
 		and base_title ~= ""
