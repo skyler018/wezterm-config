@@ -841,6 +841,11 @@ keys_config.keys = {
 		action = jump_to_agent_attention_action(),
 	},
 	{
+		key = "b",
+		mods = PRIMARY_MOD,
+		action = tmux_prefixed_send("B", "tmux: 打开左侧窗口侧栏"),
+	},
+	{
 		key = "[",
 		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("\x08", "tmux: 上一个 window"),
