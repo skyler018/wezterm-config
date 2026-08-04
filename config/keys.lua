@@ -566,6 +566,73 @@ local function herdr_pane_zoom_action()
 	end)
 end
 
+-- 在当前 pane 右侧新建 herdr pane，并在其中启动指定 agent（沿用当前工作目录并聚焦新 pane）
+local function herdr_agent_in_new_pane_action(agent_kind, toast_label)
+	return wezterm.action_callback(function(window, pane)
+		if not window or not pane then
+			return
+		end
+
+		local exists = deps.command_exists(agent_kind)
+		if not exists then
+			local missing = deps.get_missing_for_bins({ agent_kind })
+			if #missing > 0 then
+				deps.prompt_install(window, pane, missing)
+			else
+				window:toast_notification("WezTerm", "未检测到 " .. agent_kind .. "，请先安装", nil, 4000)
+			end
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local cwd = get_pane_cwd(pane)
+
+		-- 1) 分屏：右侧新建 herdr pane，沿用当前工作目录并聚焦
+		local split_args = { herdr_path, "pane", "split", "--direction", "right", "--focus" }
+		if cwd and #cwd > 0 then
+			table.insert(split_args, "--cwd")
+			table.insert(split_args, cwd)
+		end
+		local ok, stdout, stderr = wezterm.run_child_process(split_args)
+		if not ok then
+			window:toast_notification("WezTerm", toast_label .. " 分屏失败: " .. tostring(stderr or ""), nil, 3000)
+			return
+		end
+
+		local ok2, data = pcall(wezterm.json_parse, stdout)
+		if not ok2 or not data or not data.result or not data.result.pane or not data.result.pane.pane_id then
+			window:toast_notification("WezTerm", toast_label .. " 分屏后无法解析新 pane ID", nil, 3000)
+			return
+		end
+		local new_pane_id = data.result.pane.pane_id
+
+		-- 2) 在新 pane 中启动 agent（唯一命名，避免与已有 agent 重名冲突）
+		local name = agent_kind .. "-" .. tostring(os.time())
+		local start_args = {
+			herdr_path,
+			"agent",
+			"start",
+			name,
+			"--kind",
+			agent_kind,
+			"--pane",
+			new_pane_id,
+		}
+		if agent_kind == "claude" then
+			-- 与原有 claude 启动方式保持一致
+			table.insert(start_args, "--")
+			table.insert(start_args, "--dangerously-skip-permissions")
+		end
+		local ok3, _, stderr3 = wezterm.run_child_process(start_args)
+		if not ok3 then
+			window:toast_notification("WezTerm", toast_label .. " 启动失败: " .. tostring(stderr3 or ""), nil, 4000)
+			return
+		end
+
+		window:toast_notification("WezTerm", toast_label, nil, 1200)
+	end)
+end
+
 local function pane_direction_action(direction)
 	if USE_WEZTERM_PANES then
 		return act.ActivatePaneDirection(direction)
@@ -931,23 +998,23 @@ keys_config.keys = {
 	{
 		key = "o",
 		mods = PRIMARY_SHIFT_MOD,
-		action = wezterm.action_callback(open_selected_http_url),
+		action = herdr_agent_in_new_pane_action("opencode", "herdr: 新 pane 打开 opencode"),
 	},
 	{
 		key = "O",
 		mods = PRIMARY_SHIFT_MOD,
-		action = wezterm.action_callback(open_selected_http_url),
+		action = herdr_agent_in_new_pane_action("opencode", "herdr: 新 pane 打开 opencode"),
 	},
 	{
 		key = "X",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
+		action = herdr_agent_in_new_pane_action("codex", "herdr: 新 pane 打开 codex"),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "x",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action(";", "tmux: 打开 codex pane", split_codex),
+		action = herdr_agent_in_new_pane_action("codex", "herdr: 新 pane 打开 codex"),
 	},
 	{
 		key = "T",
@@ -984,12 +1051,12 @@ keys_config.keys = {
 	{
 		key = "C",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
+		action = herdr_agent_in_new_pane_action("claude", "herdr: 新 pane 打开 claude"),
 	},
 	{
 		key = "c",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action("]", "tmux: 打开 claude pane", split_claude),
+		action = herdr_agent_in_new_pane_action("claude", "herdr: 新 pane 打开 claude"),
 	},
 
 	{
@@ -1013,7 +1080,7 @@ keys_config.keys = {
 		action = wezterm.action.ActivateCopyMode,
 	},
 
-	-- 调整 pane 大小（herdr，h=左/k=上/j=下；l/L 已让位给 herdr lazygit popup）
+	-- 调整 pane 大小（herdr，h=左/k=上/j=下/l=右）
 	{
 		key = "h",
 		mods = PRIMARY_SHIFT_MOD,
@@ -1024,15 +1091,20 @@ keys_config.keys = {
 		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Left"),
 	},
-	-- herdr lazygit popup（转发 prefix+alt+g）
 	{
 		key = "l",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_prefixed_send("\x1bg", "herdr: 打开 lazygit popup"),
+		action = pane_resize_action("Right"),
 	},
 	{
 		key = "L",
 		mods = PRIMARY_SHIFT_MOD,
+		action = pane_resize_action("Right"),
+	},
+	-- herdr lazygit popup（Cmd+g，转发 prefix+alt+g）
+	{
+		key = "g",
+		mods = PRIMARY_MOD,
 		action = tmux_prefixed_send("\x1bg", "herdr: 打开 lazygit popup"),
 	},
 	{

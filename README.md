@@ -113,18 +113,18 @@
 - `PRIMARY+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录
 - `PRIMARY+SHIFT+g/G`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录
 - `PRIMARY+SHIFT+i`：手动弹出依赖安装提示
-- `PRIMARY+SHIFT+c/C`：默认在新标签页打开 `claude`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `claude`
-- `PRIMARY+SHIFT+x/X`：默认在新标签页打开 `codex`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `codex`
+- `PRIMARY+SHIFT+c/C`：在当前 pane 右侧新建 herdr pane 并打开 `claude`（沿用当前工作目录）
+- `PRIMARY+SHIFT+x/X`：在当前 pane 右侧新建 herdr pane 并打开 `codex`（沿用当前工作目录）
 - `PRIMARY+SHIFT+t/T`：默认在新标签页打开 `traex`（fallback: `claude`）；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split agent pane
-- `PRIMARY+SHIFT+o/O`：在浏览器中打开当前选中文本中的 http/https 链接
+- `PRIMARY+SHIFT+o/O`：在当前 pane 右侧新建 herdr pane 并打开 `opencode`（沿用当前工作目录）
 - `PRIMARY+SHIFT+[` / `PRIMARY+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
 - `PRIMARY+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
 - `OPT+1..9`：按 `herdr agent list` 顺序聚焦第 N 个 herdr agent
 - `CTRL+1..9`：按 `herdr workspace list` 顺序切换到第 N 个打开的 herdr workspace（每个对应一个 worktree/checkout）
 - `F1`：进入复制模式（见 `config/keys.lua:800`）
 - `PRIMARY+h/j/k/l`：调用 herdr 跳到相邻 pane（h/l=左右、k/j=上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
-- `PRIMARY+SHIFT+h/k/j`：调用 herdr 调整 pane 大小（h=左、k=上、j=下）；`PRIMARY+SHIFT+l/L` 已改为打开 herdr lazygit popup；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
-- `PRIMARY+SHIFT+l/L`：调用 herdr 的 lazygit popup（转发 `prefix+alt+g`）
+- `PRIMARY+SHIFT+h/k/j/l`：调用 herdr 调整 pane 大小（h=左、k=上、j=下、l=右）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
+- `PRIMARY+g`：调用 herdr 的 lazygit popup（转发 `prefix+alt+g`）
 - herdr 新建 workspace：`PRIMARY+n`（基于当前 pane 工作目录创建并切换）
 - 新窗口：`PRIMARY+SHIFT+n`
 - `PRIMARY+b`：调用 herdr 切换侧边栏（转发 `prefix+b`）
@@ -166,10 +166,10 @@
 |------|------|
 | `PRIMARY+SHIFT+y` | 新标签页打开 yazi |
 | `PRIMARY+SHIFT+g/G` | 新标签页打开 lazygit |
-| `PRIMARY+SHIFT+c/C` | 新标签页打开 claude |
-| `PRIMARY+SHIFT+x/X` | 新标签页打开 codex |
+| `PRIMARY+SHIFT+c/C` | 新 herdr pane 打开 claude |
+| `PRIMARY+SHIFT+x/X` | 新 herdr pane 打开 codex |
 | `PRIMARY+SHIFT+t/T` | 新标签页打开 traex（fallback: claude） |
-| `PRIMARY+SHIFT+o/O` | 在浏览器中打开选中链接 |
+| `PRIMARY+SHIFT+o/O` | 新 herdr pane 打开 opencode |
 | `PRIMARY+SHIFT+[` | 切到上一个 tmux window |
 | `PRIMARY+SHIFT+]` | 切到下一个 tmux window |
 | `PRIMARY+SHIFT+i` | 手动触发依赖检测/安装 |
@@ -180,8 +180,8 @@
 | `OPT+1..9` | 聚焦第 N 个 herdr agent |
 | `CTRL+1..9` | 切换第 N 个 herdr workspace（worktree） |
 | `PRIMARY+h/j/k/l` | 调用 herdr 跳转相邻 pane |
-| `PRIMARY+SHIFT+h/k/j` | 调用 herdr 调整 pane 大小 |
-| `PRIMARY+SHIFT+l/L` | 打开 herdr lazygit popup |
+| `PRIMARY+SHIFT+h/k/j/l` | 调用 herdr 调整 pane 大小 |
+| `PRIMARY+g` | 打开 herdr lazygit popup |
 | `PRIMARY+n` | herdr 新建 workspace |
 | `PRIMARY+SHIFT+n` | 新建窗口 |
 | `PRIMARY+b` | 切换 herdr 侧边栏 |
