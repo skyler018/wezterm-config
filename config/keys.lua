@@ -46,10 +46,6 @@ local function tmux_workflow_action(keys, hint_label, callback)
 	return tmux_prefixed_send(keys, hint_label)
 end
 
-local function tmux_user_action(keys, user_hint_label)
-	return tmux_prefixed_send(keys, user_hint_label)
-end
-
 local function get_login_shell_args(...)
 	local args = { deps.get_shell(), "-ic", 'exec "$0" "$@"' }
 	for i = 1, select("#", ...) do
@@ -498,22 +494,91 @@ local function resize_pane_by_percent(window, pane, dir)
 	window:perform_action(act.AdjustPaneSize({ dir, step }), pane)
 end
 
+local function herdr_bin()
+	-- macOS 上从 Dock/Spotlight 启动的 wezterm GUI PATH 只有系统目录，
+	-- 直接跑 `herdr` 会找不到命令；这里优先用 PATH/登录 shell 解析，再兜底绝对路径。
+	local ok, path = deps.command_exists("herdr")
+	if ok and path and #path > 0 then
+		return path
+	end
+	return (os.getenv("HOME") or "") .. "/.local/bin/herdr"
+end
+
+local function herdr_pane_split_action(direction)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "split", "--direction", direction })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr 分屏失败: " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+
+		window:toast_notification("WezTerm", "herdr 分屏完成（" .. direction .. "）", nil, 1000)
+	end)
+end
+
+local function herdr_pane_resize_action(direction)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "resize", "--direction", direction })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr resize 失败: " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+	end)
+end
+
+local function herdr_pane_focus_action(direction)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "focus", "--direction", direction })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr 跳转失败: " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+	end)
+end
+
+local function herdr_pane_zoom_action()
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "zoom", "--toggle" })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr zoom 失败: " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+	end)
+end
+
 local function pane_direction_action(direction)
 	if USE_WEZTERM_PANES then
 		return act.ActivatePaneDirection(direction)
 	end
 
-	local tmux_direction_key = {
-		Left = "h",
-		Down = "J",
-		Up = "k",
-		Right = "l",
+	local herdr_dir = {
+		Left = "left",
+		Right = "right",
+		Up = "up",
+		Down = "down",
 	}
 
-	return tmux_prefixed_send(
-		tmux_direction_key[direction] or "",
-		"tmux: 切换到" .. tostring(direction) .. "侧 pane"
-	)
+	return herdr_pane_focus_action(herdr_dir[direction] or "left")
 end
 
 local function pane_resize_action(direction)
@@ -523,17 +588,14 @@ local function pane_resize_action(direction)
 		end)
 	end
 
-	local tmux_resize_key = {
-		Left = "H",
-		Down = "J",
-		Up = "K",
-		Right = "L",
+	local herdr_dir = {
+		Left = "left",
+		Right = "right",
+		Up = "up",
+		Down = "down",
 	}
 
-	return tmux_prefixed_send(
-		tmux_resize_key[direction] or "",
-		"tmux: 调整" .. tostring(direction) .. "侧 pane 大小"
-	)
+	return herdr_pane_resize_action(herdr_dir[direction] or "left")
 end
 
 local function pane_split_action(direction)
@@ -544,20 +606,9 @@ local function pane_split_action(direction)
 		return act.SplitVertical
 	end
 
-	local tmux_split_key = {
-		horizontal = "s",
-		vertical = "v",
-	}
-
-	local split_hint = {
-		horizontal = "tmux: 上下分屏",
-		vertical = "tmux: 左右分屏",
-	}
-
-	return tmux_prefixed_send(
-		tmux_split_key[direction] or "",
-		split_hint[direction] or "tmux: 分屏"
-	)
+	-- herdr：horizontal=上下(down)、vertical=左右(right)
+	local herdr_dir = direction == "horizontal" and "down" or "right"
+	return herdr_pane_split_action(herdr_dir)
 end
 
 local function pane_zoom_action()
@@ -565,7 +616,7 @@ local function pane_zoom_action()
 		return "TogglePaneZoomState"
 	end
 
-	return tmux_prefixed_send("z", "tmux: 放大或还原当前 pane")
+	return herdr_pane_zoom_action()
 end
 
 local function pane_close_action()
@@ -576,8 +627,79 @@ local function pane_close_action()
 	return tmux_prefixed_send("x", "tmux: 关闭当前 pane（需确认）")
 end
 
-local function jump_to_agent_attention_action()
-	return tmux_user_action("\x1bj", "AI 通知跳转：定位到需要处理的 agent")
+local function herdr_focus_agent_action(index)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, stdout, stderr = wezterm.run_child_process({ herdr_path, "agent", "list" })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr agent list 失败 (" .. herdr_path .. "): " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+
+		local ok2, data = pcall(wezterm.json_parse, stdout)
+		if not ok2 or not data or not data.result or type(data.result.agents) ~= "table" then
+			window:toast_notification("WezTerm", "herdr agent list 输出解析失败", nil, 2000)
+			return
+		end
+
+		local agent = data.result.agents[index]
+		if not agent or not agent.tab_id then
+			window:toast_notification("WezTerm", "不存在第 " .. index .. " 个 herdr agent", nil, 2000)
+			return
+		end
+
+		local fok, _, ferr = wezterm.run_child_process({ herdr_path, "tab", "focus", agent.tab_id })
+		if not fok then
+			window:toast_notification("WezTerm", "herdr 切换失败: " .. tostring(ferr or ""), nil, 2000)
+			return
+		end
+
+		window:toast_notification("WezTerm", "已切换到 herdr agent: " .. tostring(agent.agent or ""), nil, 1200)
+	end)
+end
+
+local function herdr_switch_worktree_action(index)
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, stdout, stderr = wezterm.run_child_process({ herdr_path, "workspace", "list" })
+		if not ok then
+			window:toast_notification("WezTerm", "herdr workspace list 失败: " .. tostring(stderr or ""), nil, 2000)
+			return
+		end
+
+		local ok2, data = pcall(wezterm.json_parse, stdout)
+		if not ok2 or not data or not data.result or type(data.result.workspaces) ~= "table" then
+			window:toast_notification("WezTerm", "herdr workspace list 输出解析失败", nil, 2000)
+			return
+		end
+
+		local ws = data.result.workspaces[index]
+		if not ws or not ws.workspace_id then
+			window:toast_notification("WezTerm", "不存在第 " .. index .. " 个 herdr workspace", nil, 2000)
+			return
+		end
+
+		local fok, _, ferr = wezterm.run_child_process({ herdr_path, "workspace", "focus", ws.workspace_id })
+		if not fok then
+			window:toast_notification("WezTerm", "herdr 切换失败: " .. tostring(ferr or ""), nil, 2000)
+			return
+		end
+
+		window:toast_notification(
+			"WezTerm",
+			"已切换到 herdr workspace: " .. tostring(ws.label or ws.workspace_id),
+			nil,
+			1200
+		)
+	end)
 end
 
 local function split_claude(window, pane)
@@ -836,16 +958,6 @@ keys_config.keys = {
 		action = pane_direction_action("Down"),
 	},
 	{
-		key = "g",
-		mods = PRIMARY_MOD,
-		action = jump_to_agent_attention_action(),
-	},
-	{
-		key = "b",
-		mods = PRIMARY_MOD,
-		action = tmux_prefixed_send("B", "tmux: 打开左侧窗口侧栏"),
-	},
-	{
 		key = "[",
 		mods = PRIMARY_SHIFT_MOD,
 		action = tmux_prefixed_send("\x08", "tmux: 上一个 window"),
@@ -861,7 +973,7 @@ keys_config.keys = {
 		action = wezterm.action.ActivateCopyMode,
 	},
 
-	-- resize pane（仅在同 tab 多 pane 时生效）
+	-- 调整 pane 大小（herdr，h=左/k=上/j=下；l/L 已让位给 herdr lazygit popup）
 	{
 		key = "h",
 		mods = PRIMARY_SHIFT_MOD,
@@ -872,15 +984,16 @@ keys_config.keys = {
 		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Left"),
 	},
+	-- herdr lazygit popup（转发 prefix+alt+g）
 	{
 		key = "l",
 		mods = PRIMARY_SHIFT_MOD,
-		action = pane_resize_action("Right"),
+		action = tmux_prefixed_send("\x1bg", "herdr: 打开 lazygit popup"),
 	},
 	{
 		key = "L",
 		mods = PRIMARY_SHIFT_MOD,
-		action = pane_resize_action("Right"),
+		action = tmux_prefixed_send("\x1bg", "herdr: 打开 lazygit popup"),
 	},
 	{
 		key = "k",
@@ -904,6 +1017,13 @@ keys_config.keys = {
 	},
 	-- 新窗口
 	{ key = "n", mods = PRIMARY_MOD, action = wezterm.action.SpawnWindow },
+
+	-- herdr 侧边栏（转发 prefix+b，对应 herdr 的 toggle_sidebar）
+	{ key = "b", mods = PRIMARY_MOD, action = tmux_prefixed_send("b", "herdr: 切换侧边栏") },
+
+	-- herdr 设置（转发 prefix+s，对应 herdr 的 settings）
+	{ key = "m", mods = PRIMARY_MOD, action = tmux_prefixed_send("s", "herdr: 打开设置") },
+
 	{ key = "1", mods = PRIMARY_MOD, action = tmux_prefixed_send("1", "tmux: window 1") },
 	{ key = "2", mods = PRIMARY_MOD, action = tmux_prefixed_send("2", "tmux: window 2") },
 	{ key = "3", mods = PRIMARY_MOD, action = tmux_prefixed_send("3", "tmux: window 3") },
@@ -914,9 +1034,9 @@ keys_config.keys = {
 	{ key = "8", mods = PRIMARY_MOD, action = tmux_prefixed_send("8", "tmux: window 8") },
 	{ key = "9", mods = PRIMARY_MOD, action = tmux_prefixed_send("9", "tmux: window 9") },
 
-	-- 分屏
-	{ key = "d", mods = PRIMARY_MOD, action = pane_split_action("horizontal") },
-	{ key = "D", mods = PRIMARY_SHIFT_MOD, action = pane_split_action("vertical") },
+	-- 分屏（herdr：d=垂直/左右，D=水平/上下）
+	{ key = "d", mods = PRIMARY_MOD, action = pane_split_action("vertical") },
+	{ key = "D", mods = PRIMARY_SHIFT_MOD, action = pane_split_action("horizontal") },
 
 	-- 关闭 pane
 	{ key = "w", mods = PRIMARY_MOD, action = pane_close_action() },
@@ -927,6 +1047,24 @@ keys_config.keys = {
 	-- 全屏
 	{ key = "f", mods = PRIMARY_SHIFT_MOD, action = "ToggleFullScreen" },
 }
+
+-- herdr agent 切换：OPT+1..9 聚焦第 N 个 agent（按 `herdr agent list` 顺序）
+for i = 1, 9 do
+	table.insert(keys_config.keys, {
+		key = tostring(i),
+		mods = "OPT",
+		action = herdr_focus_agent_action(i),
+	})
+end
+
+-- herdr worktree 切换：CTRL+1..9 聚焦第 N 个打开的 workspace（每个对应一个 worktree/checkout）
+for i = 1, 9 do
+	table.insert(keys_config.keys, {
+		key = tostring(i),
+		mods = "CTRL",
+		action = herdr_switch_worktree_action(i),
+	})
+end
 
 local init = require("config/init")
 local resurrect_config = require("config/resurrect")

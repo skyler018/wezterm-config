@@ -1,22 +1,7 @@
 local theme_config = {}
 
--- Ghostty default (StyleDark) palette
-theme_config.colors = {
-	foreground = "#ffffff",
-	background = "#292c33",
-	cursor_bg = "#ffffff",
-	cursor_fg = "#363a43",
-	selection_bg = "#ffffff",
-	selection_fg = "#292c33",
-	ansi = {
-		"#1d1f21", "#bf6b69", "#b7bd73", "#e9c880",
-		"#88a1bb", "#ad95b8", "#95bdb7", "#c5c8c6",
-	},
-	brights = {
-		"#666666", "#c55757", "#bcc95f", "#e1c65e",
-		"#83a5d6", "#bc99d4", "#83beb1", "#eaeaea",
-	},
-}
+-- 与 nvim（LazyVim + catppuccin mocha，透明背景）保持一致
+theme_config.color_scheme = "Catppuccin Mocha"
 
 local init = require("config/init")
 init.register("theme", theme_config)

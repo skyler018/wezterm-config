@@ -116,18 +116,21 @@
 - `PRIMARY+SHIFT+c/C`：默认在新标签页打开 `claude`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `claude`
 - `PRIMARY+SHIFT+x/X`：默认在新标签页打开 `codex`；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split `codex`
 - `PRIMARY+SHIFT+t/T`：默认在新标签页打开 `traex`（fallback: `claude`）；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split agent pane
-- `PRIMARY+g`：跳到当前需要 attention 的 AI agent；这是用户侧主入口，内部会转发给 tmux 的 agent attention 跳转脚本
-- `PRIMARY+b`：打开 tmux 的左侧窗口侧栏；内部会转发为 `tmux prefix + B`
 - `PRIMARY+SHIFT+o/O`：在浏览器中打开当前选中文本中的 http/https 链接
 - `PRIMARY+SHIFT+[` / `PRIMARY+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
 - `PRIMARY+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
+- `OPT+1..9`：按 `herdr agent list` 顺序聚焦第 N 个 herdr agent
+- `CTRL+1..9`：按 `herdr workspace list` 顺序切换到第 N 个打开的 herdr workspace（每个对应一个 worktree/checkout）
 - `F1`：进入复制模式（见 `config/keys.lua:800`）
-- `PRIMARY+h/j/k/l`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
-- `PRIMARY+SHIFT+h/j/k/l`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
+- `PRIMARY+h/j/k/l`：调用 herdr 跳到相邻 pane（h/l=左右、k/j=上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
+- `PRIMARY+SHIFT+h/k/j`：调用 herdr 调整 pane 大小（h=左、k=上、j=下）；`PRIMARY+SHIFT+l/L` 已改为打开 herdr lazygit popup；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
+- `PRIMARY+SHIFT+l/L`：调用 herdr 的 lazygit popup（转发 `prefix+alt+g`）
 - 新窗口：`PRIMARY+n`
-- `PRIMARY+d` / `PRIMARY+SHIFT+D`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm 分屏
+- `PRIMARY+b`：调用 herdr 切换侧边栏（转发 `prefix+b`）
+- `PRIMARY+m`：调用 herdr 打开设置（转发 `prefix+s`）
+- `PRIMARY+d` / `PRIMARY+SHIFT+D`：调用 herdr 分屏（d=垂直/左右、D=水平/上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm 分屏
 - 关闭 pane：`PRIMARY+w`（确认提示开启）
-- `PRIMARY+Enter`：默认只提示“pane 已交给 tmux 管理”；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 放大/还原
+- `PRIMARY+Enter`：调用 herdr 最大化/还原当前 pane；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 放大/还原
 - 全屏：`PRIMARY+SHIFT+f`
 - `PRIMARY+SHIFT+s/r`：默认未注册；当 `ENABLE_WEZTERM_RESURRECT=true` 时恢复为 WezTerm 状态保存/恢复
 
@@ -165,8 +168,6 @@
 | `PRIMARY+SHIFT+c/C` | 新标签页打开 claude |
 | `PRIMARY+SHIFT+x/X` | 新标签页打开 codex |
 | `PRIMARY+SHIFT+t/T` | 新标签页打开 traex（fallback: claude） |
-| `PRIMARY+g` | 跳到需要处理的 AI agent |
-| `PRIMARY+b` | 打开 tmux 左侧窗口侧栏 |
 | `PRIMARY+SHIFT+o/O` | 在浏览器中打开选中链接 |
 | `PRIMARY+SHIFT+[` | 切到上一个 tmux window |
 | `PRIMARY+SHIFT+]` | 切到下一个 tmux window |
@@ -175,11 +176,16 @@
 | `PRIMARY+SHIFT+r` | 默认未启用（可恢复 WezTerm 状态恢复） |
 | `F1` | 进入复制模式 |
 | `PRIMARY+1..9` | 直接切到 tmux window 1..9 |
-| `PRIMARY+h/j/k/l` | 默认提示改用 tmux 管理 pane |
-| `PRIMARY+SHIFT+h/j/k/l` | 默认提示改用 tmux 管理 pane |
+| `OPT+1..9` | 聚焦第 N 个 herdr agent |
+| `CTRL+1..9` | 切换第 N 个 herdr workspace（worktree） |
+| `PRIMARY+h/j/k/l` | 调用 herdr 跳转相邻 pane |
+| `PRIMARY+SHIFT+h/k/j` | 调用 herdr 调整 pane 大小 |
+| `PRIMARY+SHIFT+l/L` | 打开 herdr lazygit popup |
 | `PRIMARY+n` | 新建窗口 |
-| `PRIMARY+d` | 默认提示改用 tmux 分屏 |
-| `PRIMARY+SHIFT+D` | 默认提示改用 tmux 分屏 |
+| `PRIMARY+b` | 切换 herdr 侧边栏 |
+| `PRIMARY+m` | 打开 herdr 设置 |
+| `PRIMARY+d` | herdr 垂直分屏（左右） |
+| `PRIMARY+SHIFT+D` | herdr 水平分屏（上下） |
 | `PRIMARY+w` | 关闭 pane（确认提示） |
-| `PRIMARY+Enter` | 默认提示改用 tmux pane 缩放 |
+| `PRIMARY+Enter` | herdr 最大化/还原当前 pane |
 | `PRIMARY+SHIFT+f` | 切换全屏 |
