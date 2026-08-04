@@ -75,7 +75,8 @@ Colors are set directly in `theme.lua` via the `colors` config key, matching Gho
 | `F1` | Enter copy mode |
 | `CMD+h/j/k/l` | Navigate panes (left/down/up/right) |
 | `CMD+SHIFT+h/j/k/l` | Resize pane (H/J/K/L variants also work) |
-| `CMD+n` | New window |
+| `CMD+n` | herdr create + focus new workspace (based on current pane cwd) |
+| `CMD+SHIFT+n` | New window |
 | `CMD+d` | Split horizontal |
 | `CMD+SHIFT+D` | Split vertical |
 | `CMD+w` | Close pane (with confirm) |

@@ -125,7 +125,8 @@
 - `PRIMARY+h/j/k/l`：调用 herdr 跳到相邻 pane（h/l=左右、k/j=上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
 - `PRIMARY+SHIFT+h/k/j`：调用 herdr 调整 pane 大小（h=左、k=上、j=下）；`PRIMARY+SHIFT+l/L` 已改为打开 herdr lazygit popup；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
 - `PRIMARY+SHIFT+l/L`：调用 herdr 的 lazygit popup（转发 `prefix+alt+g`）
-- 新窗口：`PRIMARY+n`
+- herdr 新建 workspace：`PRIMARY+n`（基于当前 pane 工作目录创建并切换）
+- 新窗口：`PRIMARY+SHIFT+n`
 - `PRIMARY+b`：调用 herdr 切换侧边栏（转发 `prefix+b`）
 - `PRIMARY+m`：调用 herdr 打开设置（转发 `prefix+s`）
 - `PRIMARY+d` / `PRIMARY+SHIFT+D`：调用 herdr 分屏（d=垂直/左右、D=水平/上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm 分屏
@@ -181,7 +182,8 @@
 | `PRIMARY+h/j/k/l` | 调用 herdr 跳转相邻 pane |
 | `PRIMARY+SHIFT+h/k/j` | 调用 herdr 调整 pane 大小 |
 | `PRIMARY+SHIFT+l/L` | 打开 herdr lazygit popup |
-| `PRIMARY+n` | 新建窗口 |
+| `PRIMARY+n` | herdr 新建 workspace |
+| `PRIMARY+SHIFT+n` | 新建窗口 |
 | `PRIMARY+b` | 切换 herdr 侧边栏 |
 | `PRIMARY+m` | 打开 herdr 设置 |
 | `PRIMARY+d` | herdr 垂直分屏（左右） |

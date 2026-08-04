@@ -702,6 +702,46 @@ local function herdr_switch_worktree_action(index)
 	end)
 end
 
+local function herdr_new_workspace_action()
+	return wezterm.action_callback(function(window, pane)
+		if not window then
+			return
+		end
+
+		local cwd = get_pane_cwd(pane)
+		if not cwd then
+			window:toast_notification(
+				"WezTerm",
+				"herdr 新建 workspace 失败: 无法获取当前 pane 工作目录",
+				nil,
+				4000
+			)
+			return
+		end
+
+		local herdr_path = herdr_bin()
+		local ok, _, stderr = wezterm.run_child_process({
+			herdr_path,
+			"workspace",
+			"create",
+			"--cwd",
+			cwd,
+			"--focus",
+		})
+		if not ok then
+			window:toast_notification(
+				"WezTerm",
+				"herdr 新建 workspace 失败: " .. tostring(stderr or ""),
+				nil,
+				4000
+			)
+			return
+		end
+
+		window:toast_notification("WezTerm", "herdr 已新建并切换到 workspace", nil, 1200)
+	end)
+end
+
 local function split_claude(window, pane)
 	if not window or not pane then
 		return
@@ -1015,8 +1055,12 @@ keys_config.keys = {
 		mods = PRIMARY_SHIFT_MOD,
 		action = pane_resize_action("Down"),
 	},
+	-- herdr 新建 workspace（基于当前 pane 工作目录）
+	{ key = "n", mods = PRIMARY_MOD, action = herdr_new_workspace_action() },
 	-- 新窗口
-	{ key = "n", mods = PRIMARY_MOD, action = wezterm.action.SpawnWindow },
+	{ key = "n", mods = PRIMARY_SHIFT_MOD, action = wezterm.action.SpawnWindow },
+	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为大写
+	{ key = "N", mods = PRIMARY_SHIFT_MOD, action = wezterm.action.SpawnWindow },
 
 	-- herdr 侧边栏（转发 prefix+b，对应 herdr 的 toggle_sidebar）
 	{ key = "b", mods = PRIMARY_MOD, action = tmux_prefixed_send("b", "herdr: 切换侧边栏") },
