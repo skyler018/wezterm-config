@@ -1,5 +1,4 @@
 local wezterm = require 'wezterm'
-local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
 
 local M = {}
 local ENABLE_WEZTERM_RESURRECT = false
@@ -10,6 +9,9 @@ function M.setup(keys_config)
   if not ENABLE_WEZTERM_RESURRECT then
     return
   end
+
+  -- 仅在启用时再拉取插件，避免每次启动都去 fetch 仓库。
+  local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
 
   -- 快速保存状态 (Window + Workspace)
   table.insert(keys_config.keys, {

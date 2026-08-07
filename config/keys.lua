@@ -67,7 +67,7 @@ local function open_in_new_tab(window, pane, options)
 		window:toast_notification("WezTerm", options.toast_title, nil, 1200)
 	end
 
-	local cwd = get_pane_cwd(pane)
+	local cwd = deps.get_pane_cwd(pane)
 	window:perform_action(
 		act.SpawnCommandInNewTab({
 			domain = "CurrentPaneDomain",
@@ -145,42 +145,6 @@ local function split_right_prefer_exec(window, pane, bin_path, fallback_args, to
 		8000
 	)
 	return false
-end
-
-local function get_pane_cwd(pane)
-	local cwd_uri = pane:get_current_working_dir()
-	if not cwd_uri then
-		return nil
-	end
-
-	-- pane:get_current_working_dir() 在不同版本可能返回 Url 对象或字符串
-	-- 优先使用 Url.file_path，其次用官方转换函数，最后自行解析 file:// 作为兜底。
-	if type(cwd_uri) == "table" and cwd_uri.file_path then
-		return cwd_uri.file_path
-	end
-
-	local cwd_str = tostring(cwd_uri)
-	local ok, path = pcall(function()
-		if wezterm.uri_to_file_path then
-			return wezterm.uri_to_file_path(cwd_str)
-		end
-		if wezterm.uri_to_path then
-			return wezterm.uri_to_path(cwd_str)
-		end
-		return nil
-	end)
-	if ok and path and #path > 0 then
-		return path
-	end
-
-	if cwd_str:match("^file://") then
-		local p = cwd_str:gsub("^file://", "")
-		-- file:///Users/foo -> /Users/foo
-		p = p:gsub("^/*", "/")
-		return deps.percent_decode(p)
-	end
-
-	return nil
 end
 
 local function get_selected_text(window, pane)
@@ -376,7 +340,7 @@ local function open_lazygit(window, pane)
 		return
 	end
 
-	local cwd = get_pane_cwd(pane)
+	local cwd = deps.get_pane_cwd(pane)
 	if not cwd then
 		window:toast_notification(
 			"WezTerm",
@@ -507,66 +471,52 @@ local function herdr_bin()
 	return (os.getenv("HOME") or "") .. "/.local/bin/herdr"
 end
 
-local function herdr_pane_split_action(direction)
+-- herdr pane 子命令的方向参数（WezTerm 方向名 -> herdr 方向名）
+local HERDR_DIR = {
+	Left = "left",
+	Right = "right",
+	Up = "up",
+	Down = "down",
+}
+
+-- herdr pane 操作：统一执行 `herdr pane <subcmd> ...`，失败时报错 toast。
+local function herdr_pane_action(subcmd, extra_args, ok_toast, fail_label)
 	return wezterm.action_callback(function(window, pane)
 		if not window then
 			return
 		end
 
 		local herdr_path = herdr_bin()
-		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "split", "--direction", direction })
+		local args = { herdr_path, "pane", subcmd }
+		for _, a in ipairs(extra_args or {}) do
+			table.insert(args, a)
+		end
+		local ok, _, stderr = wezterm.run_child_process(args)
 		if not ok then
-			window:toast_notification("WezTerm", "herdr 分屏失败: " .. tostring(stderr or ""), nil, 2000)
+			window:toast_notification("WezTerm", fail_label .. ": " .. tostring(stderr or ""), nil, 2000)
 			return
 		end
 
-		window:toast_notification("WezTerm", "herdr 分屏完成（" .. direction .. "）", nil, 1000)
+		if ok_toast then
+			window:toast_notification("WezTerm", ok_toast, nil, 1000)
+		end
 	end)
+end
+
+local function herdr_pane_split_action(direction)
+	return herdr_pane_action("split", { "--direction", direction, "--focus" }, "herdr 分屏完成（" .. direction .. "）", "herdr 分屏失败")
 end
 
 local function herdr_pane_resize_action(direction)
-	return wezterm.action_callback(function(window, pane)
-		if not window then
-			return
-		end
-
-		local herdr_path = herdr_bin()
-		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "resize", "--direction", direction })
-		if not ok then
-			window:toast_notification("WezTerm", "herdr resize 失败: " .. tostring(stderr or ""), nil, 2000)
-			return
-		end
-	end)
+	return herdr_pane_action("resize", { "--direction", direction }, nil, "herdr resize 失败")
 end
 
 local function herdr_pane_focus_action(direction)
-	return wezterm.action_callback(function(window, pane)
-		if not window then
-			return
-		end
-
-		local herdr_path = herdr_bin()
-		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "focus", "--direction", direction })
-		if not ok then
-			window:toast_notification("WezTerm", "herdr 跳转失败: " .. tostring(stderr or ""), nil, 2000)
-			return
-		end
-	end)
+	return herdr_pane_action("focus", { "--direction", direction }, nil, "herdr 跳转失败")
 end
 
 local function herdr_pane_zoom_action()
-	return wezterm.action_callback(function(window, pane)
-		if not window then
-			return
-		end
-
-		local herdr_path = herdr_bin()
-		local ok, _, stderr = wezterm.run_child_process({ herdr_path, "pane", "zoom", "--toggle" })
-		if not ok then
-			window:toast_notification("WezTerm", "herdr zoom 失败: " .. tostring(stderr or ""), nil, 2000)
-			return
-		end
-	end)
+	return herdr_pane_action("zoom", { "--toggle" }, nil, "herdr zoom 失败")
 end
 
 -- 在当前 pane 右侧新建 herdr pane，并在其中启动指定 agent（沿用当前工作目录并聚焦新 pane）
@@ -588,14 +538,15 @@ local function herdr_agent_in_new_pane_action(agent_kind, toast_label)
 		end
 
 		local herdr_path = herdr_bin()
-		local cwd = get_pane_cwd(pane)
+		local cwd = deps.get_pane_cwd(pane)
 
-		-- 1) 分屏：右侧新建 herdr pane，沿用当前工作目录并聚焦
+		-- 1) 分屏：右侧新建 herdr pane，沿用当前工作目录并聚焦。
 		local split_args = { herdr_path, "pane", "split", "--direction", "right", "--focus" }
 		if cwd and #cwd > 0 then
 			table.insert(split_args, "--cwd")
 			table.insert(split_args, cwd)
 		end
+
 		local ok, stdout, stderr = wezterm.run_child_process(split_args)
 		if not ok then
 			window:toast_notification("WezTerm", toast_label .. " 分屏失败: " .. tostring(stderr or ""), nil, 3000)
@@ -643,14 +594,7 @@ local function pane_direction_action(direction)
 		return act.ActivatePaneDirection(direction)
 	end
 
-	local herdr_dir = {
-		Left = "left",
-		Right = "right",
-		Up = "up",
-		Down = "down",
-	}
-
-	return herdr_pane_focus_action(herdr_dir[direction] or "left")
+	return herdr_pane_focus_action(HERDR_DIR[direction] or "left")
 end
 
 local function pane_resize_action(direction)
@@ -660,14 +604,7 @@ local function pane_resize_action(direction)
 		end)
 	end
 
-	local herdr_dir = {
-		Left = "left",
-		Right = "right",
-		Up = "up",
-		Down = "down",
-	}
-
-	return herdr_pane_resize_action(herdr_dir[direction] or "left")
+	return herdr_pane_resize_action(HERDR_DIR[direction] or "left")
 end
 
 local function pane_split_action(direction)
@@ -780,7 +717,7 @@ local function herdr_new_workspace_action()
 			return
 		end
 
-		local cwd = get_pane_cwd(pane)
+		local cwd = deps.get_pane_cwd(pane)
 		if not cwd then
 			window:toast_notification(
 				"WezTerm",
@@ -1167,6 +1104,10 @@ keys_config.keys = {
 
 	-- 全屏
 	{ key = "f", mods = PRIMARY_SHIFT_MOD, action = "ToggleFullScreen" },
+
+	-- herdr reviewr toggle（Cmd+Shift+R，转发 prefix+alt+r）
+	{ key = "R", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
+	{ key = "r", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
 }
 
 -- herdr agent 切换：OPT+1..9 聚焦第 N 个 agent（按 `herdr agent list` 顺序）

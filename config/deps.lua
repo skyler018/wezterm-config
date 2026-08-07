@@ -35,30 +35,71 @@ function M.get_shell()
   return '/bin/zsh'
 end
 
+-- 从 pane 解析当前工作目录。兼容 WezTerm 不同版本：
+-- 优先 Url.file_path，其次官方 uri_to_file_path/uri_to_path，最后手工解析 file://。
+function M.get_pane_cwd(pane)
+  if not pane then
+    return nil
+  end
+
+  local cwd_uri = pane.current_working_dir
+  if cwd_uri == nil and type(pane.get_current_working_dir) == 'function' then
+    cwd_uri = pane:get_current_working_dir()
+  end
+  if not cwd_uri then
+    return nil
+  end
+
+  if type(cwd_uri) == 'table' and cwd_uri.file_path then
+    return cwd_uri.file_path
+  end
+
+  local cwd_str = tostring(cwd_uri)
+  local ok, path = pcall(function()
+    if wezterm.uri_to_file_path then
+      return wezterm.uri_to_file_path(cwd_str)
+    end
+    if wezterm.uri_to_path then
+      return wezterm.uri_to_path(cwd_str)
+    end
+    return nil
+  end)
+  if ok and path and #path > 0 then
+    return path
+  end
+
+  if cwd_str:match('^file://') then
+    local p = cwd_str:gsub('^file://', '')
+    -- file:///Users/foo -> /Users/foo
+    p = p:gsub('^/*', '/')
+    return M.percent_decode(p)
+  end
+
+  return nil
+end
+
 function M.command_exists(bin)
   local cached = command_exists_cache[bin]
   if cached ~= nil then
     return cached[1], cached[2]
   end
 
-  local path_env = os.getenv('PATH') or ''
-  for dir in string.gmatch(path_env, '([^:]+)') do
-    local candidate = dir .. '/' .. bin
-    local ok, stdout, stderr = wezterm.run_child_process({ '/bin/sh', '-c', '[ -x "$1" ] && printf "%s" "$1"', 'sh', candidate })
-    local path = trim(stdout)
-    if ok and #path > 0 then
-      command_exists_cache[bin] = { true, path }
-      return true, path
-    end
-  end
-
-  -- PATH 内未找到时，再回退到 login shell，兼容 alias/path_helper 等环境注入。
-  local shell = M.get_shell()
-  local ok, stdout = wezterm.run_child_process({ shell, '-lc', 'command -v ' .. shell_quote(bin) })
+  -- 单个子进程用 command -v 在 PATH 中查找可执行文件（返回首个匹配的完整路径）。
+  -- 相比原先逐目录各 fork 一次 [ -x ] 检查，避免为 PATH 里每个目录各起一个子进程。
+  local ok, stdout = wezterm.run_child_process({ '/bin/sh', '-c', 'command -v ' .. shell_quote(bin) })
   local path = trim(stdout)
   if ok and #path > 0 then
     command_exists_cache[bin] = { true, path }
     return true, path
+  end
+
+  -- PATH 内未找到时，再回退到 login shell，兼容 alias/path_helper 等环境注入。
+  local shell = M.get_shell()
+  local ok2, stdout2 = wezterm.run_child_process({ shell, '-lc', 'command -v ' .. shell_quote(bin) })
+  local path2 = trim(stdout2)
+  if ok2 and #path2 > 0 then
+    command_exists_cache[bin] = { true, path2 }
+    return true, path2
   end
   command_exists_cache[bin] = { false, nil }
   return false, nil

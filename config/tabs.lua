@@ -84,46 +84,6 @@ local function sanitize_title(text)
 	return trim(text)
 end
 
-local function get_pane_cwd(pane)
-	if not pane then
-		return nil
-	end
-
-	local cwd_uri = pane.current_working_dir
-	if cwd_uri == nil and type(pane.get_current_working_dir) == "function" then
-		cwd_uri = pane:get_current_working_dir()
-	end
-	if not cwd_uri then
-		return nil
-	end
-
-	if type(cwd_uri) == "table" and cwd_uri.file_path then
-		return cwd_uri.file_path
-	end
-
-	local cwd_str = tostring(cwd_uri)
-	local ok, path = pcall(function()
-		if wezterm.uri_to_file_path then
-			return wezterm.uri_to_file_path(cwd_str)
-		end
-		if wezterm.uri_to_path then
-			return wezterm.uri_to_path(cwd_str)
-		end
-		return nil
-	end)
-	if ok and path and #path > 0 then
-		return path
-	end
-
-	if cwd_str:match("^file://") then
-		local path_from_uri = cwd_str:gsub("^file://", "")
-		path_from_uri = path_from_uri:gsub("^/*", "/")
-		return deps.percent_decode(path_from_uri)
-	end
-
-	return nil
-end
-
 local function basename(path)
 	if not path or path == "" then
 		return nil
@@ -280,7 +240,7 @@ local function create_title(tab, max_width)
 	local shown_process_name = display_process_name(process_name)
 	local tmux_process = is_tmux_process(shown_process_name)
 	local icon = process_icon(shown_process_name)
-	local cwd_name = basename(get_pane_cwd(tab.active_pane))
+	local cwd_name = basename(deps.get_pane_cwd(tab.active_pane))
 	local base_title = sanitize_title(tab.active_pane.title)
 	local tmux_name = tmux_process and tmux_window_name() or nil
 
