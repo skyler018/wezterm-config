@@ -9,6 +9,9 @@ local PRIMARY_SHIFT_MOD = PRIMARY_MOD .. "|SHIFT"
 -- WezTerm 只保留 GUI 容器职责；需要恢复旧的 pane 工作流时改回 true。
 local USE_WEZTERM_PANES = false
 local AGENT_LAUNCH_MODE = USE_WEZTERM_PANES and "split" or "tab"
+-- herdr agent start 等待新 pane 的 shell 变为可用并启动 agent 的超时（毫秒）。
+local HERDR_AGENT_START_TIMEOUT_MS = 20000
+local CONFIG_DIR = wezterm.config_dir or ((os.getenv("HOME") or "") .. "/.config/wezterm")
 
 local function tmux_prefixed_send(keys, hint_label)
 	return wezterm.action_callback(function(window, pane)
@@ -606,30 +609,32 @@ local function herdr_agent_in_new_pane_action(agent_kind, toast_label)
 		end
 		local new_pane_id = data.result.pane.pane_id
 
-		-- 2) 在新 pane 中启动 agent（唯一命名，避免与已有 agent 重名冲突）
+		-- 2) 在新 pane 中启动 agent（唯一命名，避免与已有 agent 重名冲突）。
+		-- 刚 split 出的 pane 的 shell 尚未就绪，直接 start 会报 agent_pane_busy。
+		-- 当前 WezTerm 版本没有可靠的 wezterm.call_after；用后台脚本轮询，避免阻塞 GUI。
 		local name = agent_kind .. "-" .. tostring(os.time())
+		local start_script = CONFIG_DIR .. "/scripts/start-herdr-agent.sh"
 		local start_args = {
+			"/bin/sh",
+			start_script,
 			herdr_path,
-			"agent",
-			"start",
-			name,
-			"--kind",
 			agent_kind,
-			"--pane",
+			name,
 			new_pane_id,
+			tostring(HERDR_AGENT_START_TIMEOUT_MS),
 		}
 		if agent_kind == "claude" then
 			-- 与原有 claude 启动方式保持一致
-			table.insert(start_args, "--")
 			table.insert(start_args, "--dangerously-skip-permissions")
 		end
+
 		local ok3, _, stderr3 = wezterm.run_child_process(start_args)
 		if not ok3 then
-			window:toast_notification("WezTerm", toast_label .. " 启动失败: " .. tostring(stderr3 or ""), nil, 4000)
+			window:toast_notification("WezTerm", toast_label .. " 启动器失败: " .. tostring(stderr3 or ""), nil, 4000)
 			return
 		end
 
-		window:toast_notification("WezTerm", toast_label, nil, 1200)
+		window:toast_notification("WezTerm", "正在启动 " .. toast_label .. " ...", nil, 2000)
 	end)
 end
 
