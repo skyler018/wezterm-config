@@ -849,60 +849,6 @@ local function split_codex(window, pane)
 	deps.prompt_install(window, pane, deps.get_missing_dep("codex"))
 end
 
-local function split_traex(window, pane)
-	if not window or not pane then
-		return
-	end
-
-	local trae_ok, trae_path = deps.command_exists("traex")
-	if trae_ok and activate_existing_agent_pane(window, pane, { "trae", "traex" }, "已切换到 traex pane") then
-		return
-	end
-
-	if
-		not trae_ok
-		and activate_existing_agent_pane(window, pane, { "trae", "traex", "claude" }, "已切换到 agent pane")
-	then
-		return
-	end
-
-	if trae_ok then
-		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(window, pane, {
-				args = get_login_shell_args(trae_path or "traex"),
-				toast_title = "正在新标签页打开 traex…",
-			})
-			return
-		end
-
-		split_right_prefer_exec(window, pane, trae_path or "traex", { trae_path or "traex" }, "正在打开 traex…")
-		return
-	end
-
-	local claude_ok, claude_path = deps.command_exists("claude")
-	if claude_ok then
-		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(window, pane, {
-				args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
-				toast_title = "未检测到 traex，正在新标签页打开 claude…",
-			})
-			return
-		end
-
-		split_right_prefer_exec(
-			window,
-			pane,
-			claude_path or "claude",
-			{ claude_path or "claude", "--dangerously-skip-permissions" },
-			"未检测到 traex，正在打开 claude…"
-		)
-		return
-	end
-
-	window:toast_notification("WezTerm", "未检测到 traex/claude，将引导安装 claude…", nil, 4000)
-	deps.prompt_install(window, pane, deps.get_missing_for_bins({ "claude" }))
-end
-
 -- 鼠标
 keys_config.mouse_bindings = {
 	-- 左键双击：选词并复制到剪贴板
@@ -974,13 +920,13 @@ keys_config.keys = {
 	{
 		key = "T",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
+		action = herdr_agent_in_new_pane_action("traex", "herdr: 新 pane 打开 traex"),
 	},
 	-- 兼容部分键盘布局/版本：同一个组合键在事件里可能表现为小写
 	{
 		key = "t",
 		mods = PRIMARY_SHIFT_MOD,
-		action = tmux_workflow_action("[", "tmux: 打开 traex pane", split_traex),
+		action = herdr_agent_in_new_pane_action("traex", "herdr: 新 pane 打开 traex"),
 	},
 	{
 		key = "t",

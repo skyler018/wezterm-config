@@ -115,7 +115,7 @@
 - `PRIMARY+SHIFT+i`：手动弹出依赖安装提示
 - `PRIMARY+SHIFT+c/C`：在当前 pane 右侧新建 herdr pane 并打开 `claude`（沿用当前工作目录）
 - `PRIMARY+SHIFT+x/X`：在当前 pane 右侧新建 herdr pane 并打开 `codex`（沿用当前工作目录）
-- `PRIMARY+SHIFT+t/T`：默认在新标签页打开 `traex`（fallback: `claude`）；当 `USE_WEZTERM_PANES=true` 时恢复为优先切换/右侧 split agent pane
+- `PRIMARY+SHIFT+t/T`：在当前 pane 右侧新建 herdr pane 并打开 `traex`（沿用当前工作目录）
 - `PRIMARY+SHIFT+o/O`：在当前 pane 右侧新建 herdr pane 并打开 `opencode`（沿用当前工作目录）
 - `PRIMARY+SHIFT+[` / `PRIMARY+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
 - `PRIMARY+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
@@ -168,7 +168,7 @@
 | `PRIMARY+SHIFT+g/G` | 新标签页打开 lazygit |
 | `PRIMARY+SHIFT+c/C` | 新 herdr pane 打开 claude |
 | `PRIMARY+SHIFT+x/X` | 新 herdr pane 打开 codex |
-| `PRIMARY+SHIFT+t/T` | 新标签页打开 traex（fallback: claude） |
+| `PRIMARY+SHIFT+t/T` | 新 herdr pane 打开 traex |
 | `PRIMARY+SHIFT+o/O` | 新 herdr pane 打开 opencode |
 | `PRIMARY+SHIFT+[` | 切到上一个 tmux window |
 | `PRIMARY+SHIFT+]` | 切到下一个 tmux window |

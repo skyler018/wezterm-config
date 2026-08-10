@@ -68,7 +68,7 @@ Colors are set directly in `theme.lua` via the `colors` config key, matching Gho
 | `CMD+g` | Open herdr lazygit popup |
 | `CMD+SHIFT+c/C` | Open claude in a new herdr pane (current pane cwd) |
 | `CMD+SHIFT+x/X` | Open codex in a new herdr pane (current pane cwd) |
-| `CMD+SHIFT+t/T` | Focus existing trae pane, else split right: traecli (fallback: claude) |
+| `CMD+SHIFT+t/T` | Open traex in a new herdr pane (current pane cwd) |
 | `CMD+SHIFT+o/O` | Open Opencode in a new herdr pane (current pane cwd) |
 | `CMD+SHIFT+i` | Manually trigger dependency check/install prompt |
 | `CMD+SHIFT+s` | Save window+workspace state (resurrect) |
