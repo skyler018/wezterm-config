@@ -34,7 +34,8 @@ local function pane_workflow_hint(action_label)
 
 		window:toast_notification(
 			"WezTerm",
-			tostring(action_label) .. " 已交给 tmux 管理。想恢复旧行为时，把 config/keys.lua 中 USE_WEZTERM_PANES 改为 true。",
+			tostring(action_label)
+				.. " 已交给 tmux 管理。想恢复旧行为时，把 config/keys.lua 中 USE_WEZTERM_PANES 改为 true。",
 			nil,
 			4200
 		)
@@ -92,11 +93,13 @@ local function split_right_command(window, pane, options)
 	end
 
 	local ok, err = pcall(function()
+		local cwd = deps.get_pane_cwd(pane)
 		window:perform_action(
 			act.SplitPane({
 				direction = "Right",
 				size = { Percent = 50 },
 				command = {
+					cwd = cwd,
 					args = options.args,
 					set_environment_variables = {
 						PATH = os.getenv("PATH"),
@@ -138,12 +141,7 @@ local function split_right_prefer_exec(window, pane, bin_path, fallback_args, to
 		return true
 	end
 
-	window:toast_notification(
-		"WezTerm",
-		"打开分屏失败：" .. tostring(direct_err or shell_err),
-		nil,
-		8000
-	)
+	window:toast_notification("WezTerm", "打开分屏失败：" .. tostring(direct_err or shell_err), nil, 8000)
 	return false
 end
 
@@ -471,6 +469,36 @@ local function herdr_bin()
 	return (os.getenv("HOME") or "") .. "/.local/bin/herdr"
 end
 
+local function is_abs_path(path)
+	return type(path) == "string" and path:match("^/") ~= nil
+end
+
+local function get_herdr_focused_pane_cwd(herdr_path)
+	local ok, stdout = wezterm.run_child_process({ herdr_path, "pane", "list" })
+	if not ok or type(stdout) ~= "string" or #stdout == 0 then
+		return nil
+	end
+
+	local parsed_ok, data = pcall(wezterm.json_parse, stdout)
+	if not parsed_ok or not data or not data.result or type(data.result.panes) ~= "table" then
+		return nil
+	end
+
+	for _, herdr_pane in ipairs(data.result.panes) do
+		if herdr_pane.focused then
+			if is_abs_path(herdr_pane.foreground_cwd) then
+				return herdr_pane.foreground_cwd
+			end
+			if is_abs_path(herdr_pane.cwd) then
+				return herdr_pane.cwd
+			end
+			return nil
+		end
+	end
+
+	return nil
+end
+
 -- herdr pane 子命令的方向参数（WezTerm 方向名 -> herdr 方向名）
 local HERDR_DIR = {
 	Left = "left",
@@ -504,7 +532,12 @@ local function herdr_pane_action(subcmd, extra_args, ok_toast, fail_label)
 end
 
 local function herdr_pane_split_action(direction)
-	return herdr_pane_action("split", { "--direction", direction, "--focus" }, "herdr 分屏完成（" .. direction .. "）", "herdr 分屏失败")
+	return herdr_pane_action(
+		"split",
+		{ "--direction", direction, "--focus" },
+		"herdr 分屏完成（" .. direction .. "）",
+		"herdr 分屏失败"
+	)
 end
 
 local function herdr_pane_resize_action(direction)
@@ -538,7 +571,7 @@ local function herdr_agent_in_new_pane_action(agent_kind, toast_label)
 		end
 
 		local herdr_path = herdr_bin()
-		local cwd = deps.get_pane_cwd(pane)
+		local cwd = get_herdr_focused_pane_cwd(herdr_path) or deps.get_pane_cwd(pane)
 
 		-- 1) 分屏：右侧新建 herdr pane，沿用当前工作目录并聚焦。
 		local split_args = { herdr_path, "pane", "split", "--direction", "right", "--focus" }
@@ -581,7 +614,12 @@ local function herdr_agent_in_new_pane_action(agent_kind, toast_label)
 
 		local ok3, _, stderr3 = wezterm.run_child_process(start_args)
 		if not ok3 then
-			window:toast_notification("WezTerm", toast_label .. " 启动器失败: " .. tostring(stderr3 or ""), nil, 4000)
+			window:toast_notification(
+				"WezTerm",
+				toast_label .. " 启动器失败: " .. tostring(stderr3 or ""),
+				nil,
+				4000
+			)
 			return
 		end
 
@@ -645,7 +683,12 @@ local function herdr_focus_agent_action(index)
 		local herdr_path = herdr_bin()
 		local ok, stdout, stderr = wezterm.run_child_process({ herdr_path, "agent", "list" })
 		if not ok then
-			window:toast_notification("WezTerm", "herdr agent list 失败 (" .. herdr_path .. "): " .. tostring(stderr or ""), nil, 2000)
+			window:toast_notification(
+				"WezTerm",
+				"herdr agent list 失败 (" .. herdr_path .. "): " .. tostring(stderr or ""),
+				nil,
+				2000
+			)
 			return
 		end
 
@@ -738,12 +781,7 @@ local function herdr_new_workspace_action()
 			"--focus",
 		})
 		if not ok then
-			window:toast_notification(
-				"WezTerm",
-				"herdr 新建 workspace 失败: " .. tostring(stderr or ""),
-				nil,
-				4000
-			)
+			window:toast_notification("WezTerm", "herdr 新建 workspace 失败: " .. tostring(stderr or ""), nil, 4000)
 			return
 		end
 
@@ -763,14 +801,10 @@ local function split_claude(window, pane)
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
 		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(
-				window,
-				pane,
-				{
-					args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
-					toast_title = "正在新标签页打开 claude…",
-				}
-			)
+			open_in_new_tab(window, pane, {
+				args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
+				toast_title = "正在新标签页打开 claude…",
+			})
 			return
 		end
 
@@ -800,24 +834,14 @@ local function split_codex(window, pane)
 	local codex_ok, codex_path = deps.command_exists("codex")
 	if codex_ok then
 		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(
-				window,
-				pane,
-				{
-					args = get_login_shell_args(codex_path or "codex"),
-					toast_title = "正在新标签页打开 codex…",
-				}
-			)
+			open_in_new_tab(window, pane, {
+				args = get_login_shell_args(codex_path or "codex"),
+				toast_title = "正在新标签页打开 codex…",
+			})
 			return
 		end
 
-		split_right_prefer_exec(
-			window,
-			pane,
-			codex_path or "codex",
-			{ codex_path or "codex" },
-			"正在打开 codex…"
-		)
+		split_right_prefer_exec(window, pane, codex_path or "codex", { codex_path or "codex" }, "正在打开 codex…")
 		return
 	end
 
@@ -835,44 +859,33 @@ local function split_traex(window, pane)
 		return
 	end
 
-	if (not trae_ok) and activate_existing_agent_pane(window, pane, { "trae", "traex", "claude" }, "已切换到 agent pane") then
+	if
+		not trae_ok
+		and activate_existing_agent_pane(window, pane, { "trae", "traex", "claude" }, "已切换到 agent pane")
+	then
 		return
 	end
 
 	if trae_ok then
 		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(
-				window,
-				pane,
-				{
-					args = get_login_shell_args(trae_path or "traex"),
-					toast_title = "正在新标签页打开 traex…",
-				}
-			)
+			open_in_new_tab(window, pane, {
+				args = get_login_shell_args(trae_path or "traex"),
+				toast_title = "正在新标签页打开 traex…",
+			})
 			return
 		end
 
-		split_right_prefer_exec(
-			window,
-			pane,
-			trae_path or "traex",
-			{ trae_path or "traex" },
-			"正在打开 traex…"
-		)
+		split_right_prefer_exec(window, pane, trae_path or "traex", { trae_path or "traex" }, "正在打开 traex…")
 		return
 	end
 
 	local claude_ok, claude_path = deps.command_exists("claude")
 	if claude_ok then
 		if AGENT_LAUNCH_MODE == "tab" then
-			open_in_new_tab(
-				window,
-				pane,
-				{
-					args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
-					toast_title = "未检测到 traex，正在新标签页打开 claude…",
-				}
-			)
+			open_in_new_tab(window, pane, {
+				args = get_login_shell_args(claude_path or "claude", "--dangerously-skip-permissions"),
+				toast_title = "未检测到 traex，正在新标签页打开 claude…",
+			})
 			return
 		end
 
@@ -1106,8 +1119,8 @@ keys_config.keys = {
 	{ key = "f", mods = PRIMARY_SHIFT_MOD, action = "ToggleFullScreen" },
 
 	-- herdr reviewr toggle（Cmd+Shift+R，转发 prefix+alt+r）
-	{ key = "R", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
-	{ key = "r", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
+	-- { key = "r", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
+	-- { key = "R", mods = PRIMARY_SHIFT_MOD, action = tmux_prefixed_send("\x1br", "herdr: 切换 reviewr") },
 }
 
 -- herdr agent 切换：OPT+1..9 聚焦第 N 个 agent（按 `herdr agent list` 顺序）
