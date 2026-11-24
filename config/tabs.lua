@@ -6,7 +6,7 @@ local nf = wezterm.nerdfonts
 
 tabs_config.enable_tab_bar = true
 -- Keep the GUI-level tab strip separate from tmux's status line.
-tabs_config.tab_bar_at_bottom = false
+tabs_config.tab_bar_at_bottom = true
 tabs_config.hide_tab_bar_if_only_one_tab = true
 tabs_config.use_fancy_tab_bar = false
 tabs_config.tab_max_width = 25

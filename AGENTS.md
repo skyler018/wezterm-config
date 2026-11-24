@@ -12,18 +12,12 @@ Modular WezTerm config. `wezterm.lua` requires `config/*.lua` in order; each mod
 - **Resurrect is disabled by default** (`ENABLE_WEZTERM_RESURRECT = false` in `config/resurrect.lua`). When disabled, `setup()` returns before requiring the plugin — so `CMD+SHIFT+s/r` are NOT registered. Flip that flag to enable.
 - **WezTerm API version compat** lives in `keys.lua`: `get_pane_cwd()` handles Url-object vs string cwd; `tab_has_multiple_panes()` tries `tab:panes()` then `tab:panes_with_info()`. Keep these fallbacks when editing near them.
 
-## herdr agent launch — the trap
+## Keybinding scope — no herdr/tmux coupling
 
-Agent shortcuts (`CMD+SHIFT+c/x/o`, trae) split a herdr pane and start the agent via `scripts/start-herdr-agent.sh` — a self-forking background worker that retries `herdr agent start` until `agent_started` or deadline.
-
-- **Never loop synchronous `wezterm.run_child_process(...)` inside an action callback.** It blocks the GUI thread; retry loops mean **toast notifications never render** — the user sees "no toast" even though the binding fired and requests hit herdr. `wezterm.call_after` is not reliable on the targeted WezTerm build. Push retry/wait logic to a background process instead.
-- `agent_pane_busy` early on is **normal** — the new pane's shell isn't interactive yet; the worker retries.
-
-Debugging "pane opens but agent never starts / no toast":
-1. `grep -E "cli:(pane:split|agent:start)" ~/.config/herdr/herdr-server.log` — proves the binding fired.
-2. `cat "${TMPDIR:-/tmp}/wezterm-herdr-agent-start-"*.log` — the worker's log.
-3. `herdr pane list` — `agent_pane_not_found` means the pane shell died, not a retry problem.
-4. Missing toast ≠ config not reloaded; a blocked GUI thread is the usual cause.
+- All keybindings in `keys.lua` are native WezTerm actions (panes, tabs, windows, agent launch); they must not invoke `herdr` or send tmux prefixes.
+- Agent shortcuts (`CMD+SHIFT+c/x/t/o`) open the agent directly in a new WezTerm tab with the current pane cwd.
+- **Never loop synchronous `wezterm.run_child_process(...)` inside an action callback.** It blocks the GUI thread and toasts never render. Push long-running work to a background process instead.
+- `scripts/start-herdr-agent.sh` is no longer referenced by any keybinding; leave it alone unless the user asks to remove it.
 
 ## Style conventions
 

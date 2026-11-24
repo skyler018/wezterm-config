@@ -65,21 +65,23 @@ Colors are set directly in `theme.lua` via the `colors` config key, matching Gho
 |------|--------|
 | `CMD+SHIFT+y` | Open yazi in new tab (current pane cwd) |
 | `CMD+SHIFT+g/G` | Open lazygit in new tab (current pane cwd) |
-| `CMD+g` | Open herdr lazygit popup |
-| `CMD+SHIFT+c/C` | Open claude in a new herdr pane (current pane cwd) |
-| `CMD+SHIFT+x/X` | Open codex in a new herdr pane (current pane cwd) |
-| `CMD+SHIFT+t/T` | Open traex in a new herdr pane (current pane cwd) |
-| `CMD+SHIFT+o/O` | Open Opencode in a new herdr pane (current pane cwd) |
+| `CMD+SHIFT+c/C` | Open claude in a new tab (current pane cwd) |
+| `CMD+SHIFT+x/X` | Open codex in a new tab (current pane cwd) |
+| `CMD+SHIFT+t/T` | Open traex in a new tab (current pane cwd) |
+| `CMD+SHIFT+o/O` | Open omp in a new tab (current pane cwd) |
 | `CMD+SHIFT+i` | Manually trigger dependency check/install prompt |
 | `CMD+SHIFT+s` | Save window+workspace state (resurrect) |
 | `CMD+SHIFT+r` | Fuzzy restore saved state (resurrect) |
 | `F1` | Enter copy mode |
+| `CMD+t` | New tab |
+| `CMD+1..9` | Activate tab N |
+| `CMD+SHIFT+[` / `CMD+SHIFT+]` | Previous / next tab |
 | `CMD+h/j/k/l` | Navigate panes (left/down/up/right) |
 | `CMD+SHIFT+h/j/k/l` | Resize pane (H/J/K/L variants also work) |
-| `CMD+n` | herdr create + focus new workspace (based on current pane cwd) |
+| `CMD+n` | New window |
 | `CMD+SHIFT+n` | New window |
-| `CMD+d` | Split horizontal |
-| `CMD+SHIFT+D` | Split vertical |
+| `CMD+d` | Split left/right |
+| `CMD+SHIFT+D` | Split top/bottom |
 | `CMD+w` | Close pane (with confirm) |
 | `CMD+Enter` | Toggle pane zoom |
 | `CMD+SHIFT+f` | Toggle fullscreen |

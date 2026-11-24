@@ -71,7 +71,7 @@
 
 ### `config/tabs.lua`：Tab 栏
 
-- Tab bar 位于顶部、关闭 fancy 样式、最大宽度 `25`、关闭 index 显示（见 `config/tabs.lua:6`）
+- Tab bar 位于底部、关闭 fancy 样式、最大宽度 `25`、关闭 index 显示（见 `config/tabs.lua:6`）
 - 仅 1 个 tab 时隐藏 tab bar，关闭 tab 时切回上一个活跃 tab（见 `config/tabs.lua:8`）
 - 自定义 `format-tab-title` 事件处理（见 `config/tabs.lua:115`）：
   - 根据前台进程显示对应 Nerd Font 图标（nvim/vim → ``、shell → ``、git/lazygit → ``、docker → ``、python → ``、node → ``、go → ``、lua → ``、rust → ``、yazi → ``、AI 工具 → `` 等）
@@ -99,8 +99,8 @@
 
 ### `config/keys.lua`：键位与鼠标
 
-- `USE_WEZTERM_PANES=false`：默认把 pane 级工作流交还给 tmux；改为 `true` 可恢复原先的 WezTerm pane 行为
-- `AGENT_LAUNCH_MODE` 默认随 `USE_WEZTERM_PANES` 切换：关闭 pane 工作流时新开 tab，开启时恢复右侧 split
+- 所有 pane/tab 级键位都由 WezTerm 原生实现，不再依赖 herdr/tmux
+- agent（claude/codex/traex/omp）均直接在新标签页启动，沿用当前 pane 的工作目录
 - 主修饰键会按平台切换：macOS 使用 `CMD`，非 macOS 使用 `CTRL`
 
 鼠标：
@@ -113,25 +113,20 @@
 - `PRIMARY+SHIFT+y`：在新标签页打开 `yazi`，并尽量使用当前 pane 的工作目录作为初始目录
 - `PRIMARY+SHIFT+g/G`：在新标签页打开 `lazygit`，并以当前 pane 的工作目录作为项目目录
 - `PRIMARY+SHIFT+i`：手动弹出依赖安装提示
-- `PRIMARY+SHIFT+c/C`：在当前 pane 右侧新建 herdr pane 并打开 `claude`（沿用当前工作目录）
-- `PRIMARY+SHIFT+x/X`：在当前 pane 右侧新建 herdr pane 并打开 `codex`（沿用当前工作目录）
-- `PRIMARY+SHIFT+t/T`：在当前 pane 右侧新建 herdr pane 并打开 `traex`（沿用当前工作目录）
-- `PRIMARY+SHIFT+o/O`：在当前 pane 右侧新建 herdr pane 并打开 `opencode`（沿用当前工作目录）
-- `PRIMARY+SHIFT+[` / `PRIMARY+SHIFT+]`：发送 `tmux prefix + Ctrl-h/Ctrl-l`，切换到上一个/下一个 tmux window
-- `PRIMARY+1..9`：发送 `tmux prefix + 1..9`，直接切到对应 tmux window；不再用于 WezTerm tab 切换
-- `OPT+1..9`：按 `herdr agent list` 顺序聚焦第 N 个 herdr agent
-- `CTRL+1..9`：按 `herdr workspace list` 顺序切换到第 N 个打开的 herdr workspace（每个对应一个 worktree/checkout）
+- `PRIMARY+SHIFT+c/C`：在新标签页打开 `claude`（沿用当前工作目录）
+- `PRIMARY+SHIFT+x/X`：在新标签页打开 `codex`（沿用当前工作目录）
+- `PRIMARY+SHIFT+t/T`：在新标签页打开 `traex`（沿用当前工作目录）
+- `PRIMARY+SHIFT+o/O`：在新标签页打开 `omp`（沿用当前工作目录）
+- `PRIMARY+t`：新建 WezTerm 标签页
+- `PRIMARY+SHIFT+[` / `PRIMARY+SHIFT+]`：切换到上/下一个 WezTerm 标签页
+- `PRIMARY+1..9`：直接切到第 N 个 WezTerm 标签页
 - `F1`：进入复制模式（见 `config/keys.lua:800`）
-- `PRIMARY+h/j/k/l`：调用 herdr 跳到相邻 pane（h/l=左右、k/j=上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 焦点移动
-- `PRIMARY+SHIFT+h/k/j/l`：调用 herdr 调整 pane 大小（h=左、k=上、j=下、l=右）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 缩放
-- `PRIMARY+g`：调用 herdr 的 lazygit popup（转发 `prefix+alt+g`）
-- herdr 新建 workspace：`PRIMARY+n`（基于当前 pane 工作目录创建并切换）
-- 新窗口：`PRIMARY+SHIFT+n`
-- `PRIMARY+b`：调用 herdr 切换侧边栏（转发 `prefix+b`）
-- `PRIMARY+m`：调用 herdr 打开设置（转发 `prefix+s`）
-- `PRIMARY+d` / `PRIMARY+SHIFT+D`：调用 herdr 分屏（d=垂直/左右、D=水平/上下）；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm 分屏
+- `PRIMARY+h/j/k/l`：在 WezTerm pane 之间移动焦点（h/l=左右、k/j=上下）
+- `PRIMARY+SHIFT+h/k/j/l`：调整 WezTerm pane 大小（h=左、k=上、j=下、l=右）
+- `PRIMARY+n` / `PRIMARY+SHIFT+n`：新建 WezTerm 窗口
+- `PRIMARY+d` / `PRIMARY+SHIFT+D`：WezTerm 分屏（d=左右、D=上下）
 - 关闭 pane：`PRIMARY+w`（确认提示开启）
-- `PRIMARY+Enter`：调用 herdr 最大化/还原当前 pane；当 `USE_WEZTERM_PANES=true` 时恢复为 WezTerm pane 放大/还原
+- `PRIMARY+Enter`：WezTerm 最大化/还原当前 pane
 - 全屏：`PRIMARY+SHIFT+f`
 - `PRIMARY+SHIFT+s/r`：默认未注册；当 `ENABLE_WEZTERM_RESURRECT=true` 时恢复为 WezTerm 状态保存/恢复
 
@@ -166,28 +161,24 @@
 |------|------|
 | `PRIMARY+SHIFT+y` | 新标签页打开 yazi |
 | `PRIMARY+SHIFT+g/G` | 新标签页打开 lazygit |
-| `PRIMARY+SHIFT+c/C` | 新 herdr pane 打开 claude |
-| `PRIMARY+SHIFT+x/X` | 新 herdr pane 打开 codex |
-| `PRIMARY+SHIFT+t/T` | 新 herdr pane 打开 traex |
-| `PRIMARY+SHIFT+o/O` | 新 herdr pane 打开 opencode |
-| `PRIMARY+SHIFT+[` | 切到上一个 tmux window |
-| `PRIMARY+SHIFT+]` | 切到下一个 tmux window |
+| `PRIMARY+SHIFT+c/C` | 新标签页打开 claude |
+| `PRIMARY+SHIFT+x/X` | 新标签页打开 codex |
+| `PRIMARY+SHIFT+t/T` | 新标签页打开 traex |
+| `PRIMARY+SHIFT+o/O` | 新标签页打开 omp |
+| `PRIMARY+t` | 新建标签页 |
+| `PRIMARY+SHIFT+[` | 切到上一个标签页 |
+| `PRIMARY+SHIFT+]` | 切到下一个标签页 |
 | `PRIMARY+SHIFT+i` | 手动触发依赖检测/安装 |
 | `PRIMARY+SHIFT+s` | 默认未启用（可恢复 WezTerm 状态保存） |
 | `PRIMARY+SHIFT+r` | 默认未启用（可恢复 WezTerm 状态恢复） |
 | `F1` | 进入复制模式 |
-| `PRIMARY+1..9` | 直接切到 tmux window 1..9 |
-| `OPT+1..9` | 聚焦第 N 个 herdr agent |
-| `CTRL+1..9` | 切换第 N 个 herdr workspace（worktree） |
-| `PRIMARY+h/j/k/l` | 调用 herdr 跳转相邻 pane |
-| `PRIMARY+SHIFT+h/k/j/l` | 调用 herdr 调整 pane 大小 |
-| `PRIMARY+g` | 打开 herdr lazygit popup |
-| `PRIMARY+n` | herdr 新建 workspace |
+| `PRIMARY+1..9` | 直接切到第 N 个标签页 |
+| `PRIMARY+h/j/k/l` | WezTerm pane 焦点切换 |
+| `PRIMARY+SHIFT+h/k/j/l` | WezTerm pane 大小调整 |
+| `PRIMARY+n` | 新建窗口 |
 | `PRIMARY+SHIFT+n` | 新建窗口 |
-| `PRIMARY+b` | 切换 herdr 侧边栏 |
-| `PRIMARY+m` | 打开 herdr 设置 |
-| `PRIMARY+d` | herdr 垂直分屏（左右） |
-| `PRIMARY+SHIFT+D` | herdr 水平分屏（上下） |
+| `PRIMARY+d` | WezTerm 左右分屏 |
+| `PRIMARY+SHIFT+D` | WezTerm 上下分屏 |
 | `PRIMARY+w` | 关闭 pane（确认提示） |
-| `PRIMARY+Enter` | herdr 最大化/还原当前 pane |
+| `PRIMARY+Enter` | WezTerm 最大化/还原当前 pane |
 | `PRIMARY+SHIFT+f` | 切换全屏 |
